@@ -1,138 +1,82 @@
-const levels = ["N5", "N4", "N3", "N2", "N1"];
+import React, { useState } from 'react';
 
-export default function GrammarPage({
-  selectedLevel,
-  setSelectedLevel,
-  currentGrammarList,
-  selectedGrammar,
-  selectGrammar,
-  openGrammarDetail,
-  setActivePage
-}) {
+/**
+ * GrammarPage component allows users to browse and search for Japanese grammar points.
+ * It features a real-time search bar that filters the list by title or meaning.
+ */
+export default function GrammarPage({ grammar = [], setActivePage, setSelectedGrammar }) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter logic for title and meaning
+  const filteredGrammar = grammar.filter((item) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(query) ||
+      item.meaning.toLowerCase().includes(query)
+    );
+  });
+
   return (
-    <section className="page-stack">
-      <section className="page-hero">
-        <div>
-          <p className="eyebrow">Ngữ pháp</p>
-          <h1>Tổng hợp ngữ pháp theo cấp độ JLPT.</h1>
-          <p className="lede">
-            Đây là tầng danh sách. Bấm vào từng mẫu để mở trang chi tiết riêng, thay vì nhét toàn bộ
-            nội dung vào một màn hình.
-          </p>
+    <div className="space-y-8">
+      {/* Search bar with Icon */}
+      <div className="relative group max-w-2xl mx-auto">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-2xl">
+          🔍
         </div>
-        <div className="mini-summary">
-          <span>UI wireframe</span>
-          <strong>List layer</strong>
+        <input
+          type="text"
+          placeholder="Search by title or meaning (e.g., '~wa', 'topic', 'request')..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-12 pr-4 py-4 bg-white border-2 border-transparent rounded-2xl shadow-sm focus:ring-4 focus:ring-pink-100 focus:border-pink-500 outline-none transition-all text-lg placeholder:text-gray-400"
+        />
+      </div>
+
+      {/* Results Section */}
+      {filteredGrammar.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredGrammar.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (setSelectedGrammar) setSelectedGrammar(item);
+                setActivePage('grammar-detail');
+              }}
+              className="group relative p-8 bg-white border border-pink-100 rounded-3xl text-left shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-2xl font-bold text-gray-900 group-hover:text-pink-600 transition-colors">
+                  {item.title}
+                </h3>
+                <div className="w-8 h-8 flex items-center justify-center bg-pink-50 rounded-xl text-pink-500 font-black text-xs">
+                  語
+                </div>
+              </div>
+              <p className="text-gray-600 line-clamp-3 leading-relaxed mb-6 italic">
+                {item.explanation || item.meaning}
+              </p>
+              
+              <div className="flex items-center text-pink-500 font-bold text-sm">
+                Review Point
+                <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+              </div>
+            </button>
+          ))}
         </div>
-      </section>
-
-      <section className="studio-grid grammar-grid">
-        <aside className="panel">
-          <div className="section-head">
-            <p>Level filter</p>
-            <h2>Chọn cấp độ</h2>
-            <span>Mỗi level sẽ hiện bộ mẫu ngữ pháp riêng.</span>
-          </div>
-
-          <div className="level-tabs">
-            {levels.map((level) => (
-              <button
-                key={level}
-                type="button"
-                className={`level-chip ${selectedLevel === level ? "active" : ""}`}
-                onClick={() => setSelectedLevel(level)}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-
-          <div className="word-list">
-            {currentGrammarList.map((item) => (
-              <article
-                className={`word-card ${selectedGrammar?.id === item.id ? "is-active" : ""}`}
-                key={item.id}
-              >
-                <button type="button" className="word-card-main" onClick={() => selectGrammar(item.id)}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.structure}</span>
-                  </div>
-                  <p>{item.meaning}</p>
-                  <div className="word-meta">
-                    <span>{item.level}</span>
-                    <span>{item.examples.length} ví dụ</span>
-                  </div>
-                </button>
-                <div className="card-action-row">
-                  <span>Xem chi tiết</span>
-                  <button type="button" className="inline-link" onClick={() => openGrammarDetail(item.id)}>
-                    Mở trang
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </aside>
-
-        <article className="panel">
-          <div className="section-head">
-            <p>Preview</p>
-            <h2>Khung xem trước</h2>
-            <span>Chi tiết đầy đủ sẽ ở trang riêng, phù hợp với flow nhiều tầng.</span>
-          </div>
-
-          {selectedGrammar ? (
-            <div className="detail-card grammar-detail">
-              <div className="detail-head">
-                <div>
-                  <p>{selectedGrammar.level}</p>
-                  <strong>{selectedGrammar.title}</strong>
-                </div>
-                <span className="chip">{selectedGrammar.structure}</span>
-              </div>
-
-              <dl className="detail-grid">
-                <div>
-                  <dt>Ý nghĩa</dt>
-                  <dd>{selectedGrammar.meaning}</dd>
-                </div>
-                <div>
-                  <dt>Ghi chú</dt>
-                  <dd>{selectedGrammar.notes}</dd>
-                </div>
-                <div>
-                  <dt>Mẹo nhớ</dt>
-                  <dd>{selectedGrammar.tips}</dd>
-                </div>
-                <div>
-                  <dt>Gợi ý luyện</dt>
-                  <dd>Dùng lại mẫu này trong đề JLPT và tự đặt 1 câu mới.</dd>
-                </div>
-              </dl>
-
-              <div className="example-stack">
-                {selectedGrammar.examples.map((example) => (
-                  <article className="example-card" key={example.ja}>
-                    <strong>{example.ja}</strong>
-                    <p>{example.vi}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="button-row mt-16">
-            <button className="btn btn-primary" type="button" onClick={() => setActivePage("jlpt")}>
-              Làm đề JLPT
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={() => setActivePage("roadmap")}>
-              Quay về roadmap
-            </button>
-          </div>
-        </article>
-      </section>
-    </section>
+      ) : (
+        /* Empty State */
+        <div className="text-center py-24 bg-white/50 rounded-3xl border-2 border-dashed border-pink-200">
+          <div className="text-6xl mb-6 opacity-60">🙈</div>
+          <h3 className="text-2xl font-bold text-gray-900">Nothing found!</h3>
+          <p className="text-gray-500 mt-2 max-w-xs mx-auto">We couldn't find any grammar points matching "{searchQuery}".</p>
+          <button 
+            onClick={() => setSearchQuery('')}
+            className="mt-8 px-8 py-3 bg-pink-500 text-white font-black rounded-2xl hover:bg-pink-600 transition-all active:scale-95 shadow-lg shadow-pink-200"
+          >
+            Reset Search
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
-

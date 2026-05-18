@@ -8,10 +8,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   root: __dirname,
   plugins: [react()],
+  css: {
+    postcss: path.resolve(__dirname, "../postcss.config.js"),
+  },
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:3001"
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        secure: false,
+      }
     }
   },
   build: {

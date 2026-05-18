@@ -42,12 +42,24 @@ vocab-lab/
 - Chấm điểm tự động, lưu lịch sử làm bài
 - Giao diện sáng, đơn giản, dễ thương
 
+## Công nghệ và Mô hình kinh doanh
+
+- **Frontend (UI/UX):** Reactjs + style tailwind
+- **Backend (Auth):** Nodejs
+- **Database:** PostgreSQL
+- **Nội dung:** Lấy full ngữ pháp, từ vựng và hán tự.
+- **Monetization layer:** Freemium
+  - **Free:** 10 đề
+  - **Paid:** Full database và Affiliate
+    - Sách học JLPT
+    - Khóa học
+
 ## Chạy dự án
 
 ```bash
 npm install
 npm run dev
-```c
+```
 
 - Client: `http://localhost:5173`
 - Server: `http://localhost:3001`
@@ -55,5 +67,4 @@ npm run dev
 ## API
 
 - `GET /api/study-hub`
-- `GET /api/jlpt/:level`
-
+- `GET /api/jlpt/:level`  

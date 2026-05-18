@@ -1,121 +1,158 @@
 export default function GrammarDetailPage({
   selectedGrammar,
-  currentGrammarList,
-  setSelectedLevel,
-  openGrammarDetail,
-  setActivePage
+  currentGrammarList = [],
+  setSelectedLevel = () => {},
+  openGrammarDetail = () => {},
+  setActivePage = () => {}
 }) {
   return (
-    <section className="page-stack">
-      <section className="page-hero">
-        <div>
-          <p className="eyebrow">Ngữ pháp / chi tiết</p>
-          <h1>Trang chi tiết riêng cho từng mẫu câu.</h1>
-          <p className="lede">
-            Đây là tầng sâu hơn của ngữ pháp. Người học đọc xong một thẻ sẽ thấy toàn bộ ý nghĩa, ví dụ,
-            và ghi chú trong một màn hình riêng.
-          </p>
-        </div>
-        <div className="mini-summary">
-          <span>UI wireframe</span>
-          <strong>Detail layer</strong>
-        </div>
-      </section>
+    <div className="space-y-8 animate-fade-in">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-teal-400 via-emerald-400 to-green-400 text-white p-8 sm:p-12 rounded-3xl shadow-lg">
+        <p className="text-sm font-bold uppercase tracking-widest opacity-90">Ngữ pháp / chi tiết</p>
+        <h1 className="text-3xl sm:text-4xl font-extrabold mt-3 mb-4">Trang chi tiết riêng cho từng mẫu câu.</h1>
+        <p className="text-lg opacity-95">
+          Đây là tầng sâu hơn của ngữ pháp. Người học đọc xong một thẻ sẽ thấy toàn bộ ý nghĩa, ví dụ, và ghi chú trong một màn hình riêng.
+        </p>
+      </div>
 
-      <section className="studio-grid grammar-grid">
-        <aside className="panel">
-          <div className="section-head">
-            <p>Context</p>
-            <h2>Các mẫu cùng level</h2>
-            <span>Điều hướng nhanh giữa các mẫu liên quan.</span>
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Sidebar with Grammar List */}
+        <aside className="bg-white p-8 rounded-2xl shadow-sm border border-teal-100 h-fit">
+          <div className="mb-6">
+            <p className="text-sm font-bold uppercase tracking-widest text-teal-500">Context</p>
+            <h2 className="text-2xl font-bold text-gray-900 mt-2">Các mẫu cùng level</h2>
+            <span className="text-gray-500 text-sm mt-1 block">Điều hướng nhanh giữa các mẫu liên quan.</span>
           </div>
 
-          <div className="word-list">
+          <div className="space-y-2 mb-8 max-h-96 overflow-y-auto">
             {currentGrammarList.map((item) => (
-              <article className={`word-card ${selectedGrammar?.id === item.id ? "is-active" : ""}`} key={item.id}>
-                <button type="button" className="word-card-main" onClick={() => openGrammarDetail(item.id)}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.structure}</span>
-                  </div>
-                  <p>{item.meaning}</p>
-                  <div className="word-meta">
-                    <span>{item.level}</span>
-                    <span>{item.examples.length} ví dụ</span>
-                  </div>
-                </button>
-              </article>
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => openGrammarDetail(item.id)}
+                className={`w-full text-left p-4 rounded-xl transition-all ${
+                  selectedGrammar?.id === item.id
+                    ? 'bg-teal-500 text-white shadow-lg'
+                    : 'bg-white border border-gray-200 text-gray-900 hover:border-teal-300'
+                }`}
+              >
+                <strong className="block">{item.title}</strong>
+                <span className={`text-xs mt-1 block ${selectedGrammar?.id === item.id ? 'opacity-90' : 'text-gray-500'}`}>
+                  {item.structure}
+                </span>
+                <p className={`text-sm mt-2 line-clamp-1 ${selectedGrammar?.id === item.id ? 'opacity-90' : 'text-gray-600'}`}>
+                  {item.meaning}
+                </p>
+                <div className={`flex gap-2 mt-2 text-xs ${selectedGrammar?.id === item.id ? 'opacity-80' : 'opacity-60'}`}>
+                  <span>{item.level}</span>
+                  <span>{item.examples.length} ví dụ</span>
+                </div>
+              </button>
             ))}
           </div>
 
-          <div className="button-row mt-16">
-            <button className="btn btn-secondary" type="button" onClick={() => setSelectedLevel("N5")}>
+          <div className="flex flex-col gap-2">
+            <button 
+              className="w-full px-4 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
+              type="button" 
+              onClick={() => setSelectedLevel("N5")}
+            >
               Về N5
             </button>
-            <button className="btn btn-secondary" type="button" onClick={() => setActivePage("grammar")}>
+            <button 
+              className="w-full px-4 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
+              type="button" 
+              onClick={() => setActivePage("grammar")}
+            >
               Quay lại danh sách
             </button>
           </div>
         </aside>
 
-        <article className="panel">
-          <div className="section-head">
-            <p>Detail view</p>
-            <h2>{selectedGrammar?.title ?? "Chưa chọn mẫu"}</h2>
-            <span>Trang này tách riêng để tạo cảm giác nhiều tầng nội dung.</span>
+        {/* Main Detail Panel */}
+        <article className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-teal-100">
+          <div className="mb-8">
+            <p className="text-sm font-bold uppercase tracking-widest text-teal-500">Detail view</p>
+            <h2 className="text-2xl font-bold text-gray-900 mt-2">{selectedGrammar?.title ?? "Chưa chọn mẫu"}</h2>
+            <span className="text-gray-500 text-sm mt-1 block">Trang này tách riêng để tạo cảm giác nhiều tầng nội dung.</span>
           </div>
 
           {selectedGrammar ? (
-            <div className="detail-card grammar-detail">
-              <div className="detail-head">
-                <div>
-                  <p>{selectedGrammar.level}</p>
-                  <strong>{selectedGrammar.title}</strong>
+            <>
+              {/* Detail Header */}
+              <div className="bg-gradient-to-r from-teal-50 to-emerald-50 p-6 rounded-xl mb-8 border border-teal-100">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold text-teal-600 uppercase">{selectedGrammar.level}</p>
+                    <strong className="text-2xl text-gray-900">{selectedGrammar.title}</strong>
+                  </div>
+                  <span className="bg-teal-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                    {selectedGrammar.structure}
+                  </span>
                 </div>
-                <span className="chip">{selectedGrammar.structure}</span>
               </div>
 
-              <dl className="detail-grid">
+              {/* Detail Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                 <div>
-                  <dt>Ý nghĩa</dt>
-                  <dd>{selectedGrammar.meaning}</dd>
+                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Ý nghĩa</dt>
+                  <dd className="text-gray-800 font-medium">{selectedGrammar.meaning}</dd>
                 </div>
                 <div>
-                  <dt>Ghi chú</dt>
-                  <dd>{selectedGrammar.notes}</dd>
+                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Ghi chú</dt>
+                  <dd className="text-gray-800 font-medium">{selectedGrammar.notes}</dd>
                 </div>
                 <div>
-                  <dt>Mẹo nhớ</dt>
-                  <dd>{selectedGrammar.tips}</dd>
+                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Mẹo nhớ</dt>
+                  <dd className="text-gray-800 font-medium">{selectedGrammar.tips}</dd>
                 </div>
                 <div>
-                  <dt>Cách dùng</dt>
-                  <dd>Đặt câu mới bằng đúng cấu trúc rồi so với ví dụ mẫu.</dd>
+                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Cách dùng</dt>
+                  <dd className="text-gray-800 font-medium">Đặt câu mới bằng đúng cấu trúc rồi so với ví dụ mẫu.</dd>
                 </div>
-              </dl>
-
-              <div className="example-stack">
-                {selectedGrammar.examples.map((example) => (
-                  <article className="example-card" key={example.ja}>
-                    <strong>{example.ja}</strong>
-                    <p>{example.vi}</p>
-                  </article>
-                ))}
               </div>
+
+              {/* Examples Section */}
+              <div className="mb-8">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Ví dụ</h3>
+                <div className="space-y-3">
+                  {selectedGrammar.examples.map((example) => (
+                    <div key={example.ja} className="bg-emerald-50 border border-emerald-100 p-5 rounded-xl">
+                      <strong className="block text-gray-900 mb-2 text-lg">{example.ja}</strong>
+                      <p className="text-gray-700">{example.vi}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-16 text-gray-500">
+              <p className="text-lg font-medium">Chưa chọn mẫu</p>
             </div>
-          ) : null}
+          )}
 
-          <div className="button-row mt-16">
-            <button className="btn btn-primary" type="button" onClick={() => setActivePage("jlpt")}>
+          {/* Navigation Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 mt-8">
+            <button 
+              className="flex-1 px-4 py-3 bg-teal-500 text-white font-bold rounded-xl hover:bg-teal-600 transition-all active:scale-95 shadow-sm"
+              type="button" 
+              onClick={() => setActivePage("jlpt")}
+            >
               Sang JLPT
             </button>
-            <button className="btn btn-secondary" type="button" onClick={() => setActivePage("progress")}>
+            <button 
+              className="flex-1 px-4 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
+              type="button" 
+              onClick={() => setActivePage("progress")}
+            >
               Xem tiến độ
             </button>
           </div>
         </article>
-      </section>
-    </section>
+      </div>
+    </div>
   );
 }
 

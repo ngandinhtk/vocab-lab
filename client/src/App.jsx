@@ -1,4 +1,6 @@
+// src/App.jsx
 import Layout from "./components/Layout.jsx";
+import AuthPage from "./pages/AuthPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import RoadmapPage from "./pages/RoadmapPage.jsx";
 import GrammarPage from "./pages/GrammarPage.jsx";
@@ -8,124 +10,50 @@ import JlptResultPage from "./pages/JlptResultPage.jsx";
 import ProgressPage from "./pages/ProgressPage.jsx";
 import { useVocabState } from "./state/useVocabState.js";
 
-const pageMeta = {
-  home: {
-    title: "ポータル | Portal",
-    subtitle: "学習エリアへの入り口",
-    breadcrumb: ["Portal"]
-  },
-  roadmap: {
-    title: "ロードマップ | Roadmap",
-    subtitle: "基礎からJLPTまでの学習地図",
-    breadcrumb: ["Portal", "Roadmap"]
-  },
-  grammar: {
-    title: "文法 | Grammar",
-    subtitle: "レベル別の文法項目リスト",
-    breadcrumb: ["Portal", "Grammar"]
-  },
-  "grammar-detail": {
-    title: "文法詳細 | Detail",
-    subtitle: "文法項目の詳細ページ",
-    breadcrumb: ["Portal", "Grammar", "Detail"]
-  },
-  jlpt: {
-    title: "試験 | JLPT",
-    subtitle: "模擬試験と採点エリア",
-    breadcrumb: ["Portal", "JLPT"]
-  },
-  "jlpt-result": {
-    title: "試験結果 | Result",
-    subtitle: "結果ダッシュボードと復習の提案",
-    breadcrumb: ["Portal", "JLPT", "Result"]
-  },
-  progress: {
-    title: "進捗 | Progress",
-    subtitle: "学習履歴とスコアの推移",
-    breadcrumb: ["Portal", "Progress"]
-  }
-};
+import VocabularyPage from "./pages/VocabularyPage.jsx";
+import KanjiPage from "./pages/KanjiPage.jsx";
+import LessonDetailPage from "./pages/LessonDetailPage.jsx";
+
+// A simple router to render the correct page based on the state.
+function PageRouter({ app }) {
+  const page = app.state.activePage;
+  const levelProps = {
+    selectedLevel: app.state.selectedLevel,
+    setSelectedLevel: app.setSelectedLevel
+  };
+
+  if (page === "home") return <HomePage stats={app.stats} setActivePage={app.setActivePage} />;
+  if (page === "roadmap") return <RoadmapPage lessons={app.lessons} setActivePage={app.setActivePage} setSelectedLessonId={app.setSelectedLessonId} {...levelProps} />;
+  if (page === "lesson-detail") return <LessonDetailPage lessonId={app.state.selectedLessonId} token={app.state.token} onBack={() => app.setActivePage('roadmap')} />;
+  if (page === "vocabulary") return <VocabularyPage vocabulary={app.vocabulary} {...levelProps} />;
+  if (page === "kanji") return <KanjiPage kanji={app.kanji} {...levelProps} />;
+  if (page === "grammar") return <GrammarPage {...app} {...levelProps} />;
+  if (page === "grammar-detail") return <GrammarDetailPage {...app} />;
+  if (page === "jlpt") return <JlptPage {...app} />;
+  if (page === "jlpt-result") return <JlptResultPage {...app} />;
+  if (page === "progress") return <ProgressPage stats={app.stats} testHistory={app.state.testHistory} />;
+  
+  // Fallback to home page if no route matches
+  return <HomePage stats={app.stats} setActivePage={app.setActivePage} />;
+}
 
 export default function App() {
   const app = useVocabState();
-  const currentMeta = pageMeta[app.state.activePage] ?? pageMeta.home;
 
+  // If the user is not authenticated, show the AuthPage
+  if (!app.isAuthenticated) {
+    return <AuthPage onLogin={app.login} onRegister={app.register} />;
+  }
+
+  // If authenticated, show the main application layout
   return (
     <Layout
-      activePage={app.navigationPage}
-      currentMeta={currentMeta}
+      user={app.user}
+      activePage={app.state.activePage}
       setActivePage={app.setActivePage}
-      stats={app.stats}
+      onLogout={app.logout}
     >
-      {app.state.activePage === "home" ? (
-        <HomePage
-          stats={app.stats}
-          roadmapSteps={app.roadmap}
-          studyPillars={app.studyPillars}
-          featuredMetrics={app.featuredMetrics}
-          blueprints={app.blueprints}
-          setActivePage={app.setActivePage}
-        />
-      ) : null}
-
-      {app.state.activePage === "roadmap" ? (
-        <RoadmapPage
-          roadmapSteps={app.roadmap}
-          blueprints={app.blueprints}
-          setActivePage={app.setActivePage}
-        />
-      ) : null}
-
-      {app.state.activePage === "grammar" ? (
-        <GrammarPage
-          selectedLevel={app.state.selectedLevel}
-          setSelectedLevel={app.setSelectedLevel}
-          currentGrammarList={app.currentGrammarList}
-          selectedGrammar={app.selectedGrammar}
-          selectGrammar={app.selectGrammar}
-          openGrammarDetail={app.openGrammarDetail}
-          setActivePage={app.setActivePage}
-        />
-      ) : null}
-
-      {app.state.activePage === "grammar-detail" ? (
-        <GrammarDetailPage
-          selectedGrammar={app.selectedGrammar}
-          currentGrammarList={app.currentGrammarList}
-          setSelectedLevel={app.setSelectedLevel}
-          openGrammarDetail={app.openGrammarDetail}
-          setActivePage={app.setActivePage}
-        />
-      ) : null}
-
-      {app.state.activePage === "jlpt" ? (
-        <JlptPage
-          selectedTestLevel={app.state.selectedTestLevel}
-          currentTest={app.currentTest}
-          testAnswers={app.state.testAnswers}
-          testSubmitted={app.state.testSubmitted}
-          currentResult={app.currentResult}
-          setTestLevel={app.setTestLevel}
-          setTestAnswer={app.setTestAnswer}
-          submitTest={app.submitTest}
-          resetTest={app.resetTest}
-          setActivePage={app.setActivePage}
-        />
-      ) : null}
-
-      {app.state.activePage === "jlpt-result" ? (
-        <JlptResultPage
-          selectedTestLevel={app.state.selectedTestLevel}
-          currentTest={app.currentTest}
-          currentResult={app.currentResult}
-          setActivePage={app.setActivePage}
-          resetTest={app.resetTest}
-        />
-      ) : null}
-
-      {app.state.activePage === "progress" ? (
-        <ProgressPage stats={app.stats} testHistory={app.state.testHistory} />
-      ) : null}
+      <PageRouter app={app} />
     </Layout>
   );
 }

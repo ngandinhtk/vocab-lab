@@ -1,150 +1,94 @@
-export default function HomePage({
-  stats,
-  roadmapSteps,
-  studyPillars,
-  featuredMetrics,
-  blueprints,
-  setActivePage
-}) {
-  const nextStep = roadmapSteps[0];
-  const focusItems = [
-    {
-      title: "Tiếp tục lộ trình",
-      text: nextStep?.goal ?? "Mở roadmap để xem chặng tiếp theo.",
-      action: "roadmap"
-    },
-    {
-      title: "Ôn ngữ pháp",
-      text: `${stats.totalGrammar} mẫu câu đang sẵn sàng để ôn theo level.`,
-      action: "grammar"
-    },
-    {
-      title: "Làm lại đề gần nhất",
-      text: `Điểm trung bình hiện tại là ${stats.averageScore}%. Làm lại JLPT để kéo điểm lên.`,
-      action: "jlpt"
-    }
-  ];
+// src/pages/HomePage.jsx
+import React from 'react';
+
+// Card for high-level stats.
+const StatCard = ({ icon, label, value, colorClass }) => (
+  <div className={`p-6 rounded-2xl flex items-center space-x-4 shadow-sm border border-black/5 hover:shadow-md transition-shadow duration-300 ${colorClass}`}>
+    <div className="text-4xl">{icon}</div>
+    <div>
+      <p className="text-sm font-medium opacity-80">{label}</p>
+      <p className="text-2xl font-bold">{value}</p>
+    </div>
+  </div>
+);
+
+// Card for primary user actions.
+const ActionCard = ({ icon, title, description, buttonText, onClick, colorClass }) => (
+  <div className={`p-8 rounded-3xl flex flex-col items-start shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-black/5 ${colorClass}`}>
+    <div className="text-5xl mb-6 bg-white/30 p-4 rounded-2xl shadow-inner">{icon}</div>
+    <h2 className="text-2xl font-bold mb-2">{title}</h2>
+    <p className="flex-grow mb-8 opacity-90 leading-relaxed text-balance">{description}</p>
+    <button
+      onClick={onClick}
+      className="w-full mt-auto px-4 py-3 bg-white/50 backdrop-blur-sm font-bold rounded-2xl hover:bg-white/80 transition-all active:scale-95 shadow-sm"
+    >
+      {buttonText}
+    </button>
+  </div>
+);
+
+export default function HomePage({ stats, setActivePage }) {
+  // Dummy data for demonstration to make the page feel more alive.
+  const nextRoadmapStep = { level: "N5", title: "Beginner Basics", goal: "Master hiragana, katakana, and basic greetings." };
 
   return (
-    <section className="page-stack dashboard-page">
-      <section className="dashboard-hero">
-        <div className="hero-copy dashboard-copy">
-          <p className="eyebrow">学習ダッシュボード</p>
-          <h1>一箇所ですべてを管理する</h1>
-          <p className="lede">
-            これはポータルの概要です：進捗をすばやく確認し、必要な学習エリアを開き、タップするだけで文法や試験にジャンプできます。
-          </p>
+    <div className="space-y-10 animate-fade-in">
+      {/* Welcome Header */}
+      <div className="relative overflow-hidden p-10 bg-gradient-to-br from-pink-500 via-rose-500 to-orange-400 text-white rounded-3xl text-center shadow-2xl">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent scale-150" />
+        <h1 className="text-4xl font-extrabold tracking-tight">Welcome, Learner!</h1>
+        <p className="mt-2 text-lg opacity-90">Ready to take the next step in your Japanese journey? 頑張って！</p>
+      </div>
 
-          <div className="hero-actions">
-            <button className="btn btn-primary" type="button" onClick={() => setActivePage("jlpt")}>
-              試験を開始
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={() => setActivePage("grammar")}>
-              文法を復習
-            </button>
-          </div>
-        </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <StatCard 
+          icon="📚" 
+          label="Grammar Learned" 
+          value={stats.totalGrammar} 
+          colorClass="bg-rose-100 text-rose-800"
+        />
+        <StatCard 
+          icon="📝" 
+          label="Tests Taken" 
+          value={stats.totalTests} 
+          colorClass="bg-sky-100 text-sky-800"
+        />
+        <StatCard 
+          icon="🏆" 
+          label="Average Score" 
+          value={`${stats.averageScore}%`} 
+          colorClass="bg-emerald-100 text-emerald-800"
+        />
+      </div>
 
-        <aside className="dashboard-side">
-          <article className="panel-card dashboard-status">
-            <span className="portal-label">今日の状態</span>
-            <strong>{stats.totalTests > 0 ? "学習中" : "今日から始める"}</strong>
-            <p>
-              {stats.totalTests > 0
-                ? `現在${stats.totalTests}回の試験を行い、平均${stats.averageScore}%を維持しています。`
-                : "まだ学習履歴がありません。N5から始めるのが理想的です。"}
-            </p>
-          </article>
-        </aside>
-      </section>
-
-      <section className="studio-grid dashboard-grid-main">
-        <article className="panel home-actions-panel">
-          <div className="section-head">
-            <p>次は何をしますか？</p>
-            <h2>アクションボード</h2>
-            <span>学習エリアにすばやくアクセスするためのショートカット。</span>
-          </div>
-
-          <div className="page-card-grid dashboard-actions">
-            {focusItems.map((item) => (
-              <article className="mini-card dashboard-action-card" key={item.title}>
-                <strong>{item.title}</strong>
-                <p>{item.text}</p>
-                <button className="btn btn-secondary" type="button" onClick={() => setActivePage(item.action)}>
-                  開く
-                </button>
-              </article>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel home-learning-panel">
-          <div className="section-head">
-            <p>学習内容</p>
-            <h2>メインコンテンツ</h2>
-            <span>アプリの3つの主要エリア。学習フローを明確に保ちます。</span>
-          </div>
-
-          <div className="portal-stack">
-            {studyPillars.map((pillar, index) => (
-              <article className="portal-card" key={pillar.title}>
-                <div className="portal-card-index">0{index + 1}</div>
-                <div>
-                  <strong>{pillar.title}</strong>
-                  <p>{pillar.text}</p>
-                </div>
-                <button className="inline-link" type="button" onClick={() => setActivePage(blueprints[index].key)}>
-                  {pillar.action}
-                </button>
-              </article>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="studio-grid compact-grid home-roadmap-panel">
-        <article className="panel">
-          <div className="section-head">
-            <p>Roadmap</p>
-            <h2>Chặng học sắp tới</h2>
-            <span>Nhìn nhanh các bước kế tiếp trong lộ trình.</span>
-          </div>
-
-          <div className="timeline">
-            {roadmapSteps.slice(0, 4).map((step) => (
-              <div className="timeline-row" key={step.id}>
-                <span>{step.level}</span>
-                <div>
-                  <strong>{step.title}</strong>
-                  <p>{step.goal}</p>
-                </div>
-                <p>{step.subtitle}</p>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel home-quicklinks-panel">
-          <div className="section-head">
-            <p>Quick links</p>
-            <h2>Đi thẳng tới khu vực</h2>
-            <span>Không cần đi qua màn giới thiệu kiểu landing nữa.</span>
-          </div>
-
-          <div className="page-card-grid">
-            {blueprints.map((item) => (
-              <article className="mini-card" key={item.key}>
-                <strong>{item.label}</strong>
-                <p>{item.note}</p>
-                <button type="button" onClick={() => setActivePage(item.key)}>
-                  Mở {item.label.toLowerCase()}
-                </button>
-              </article>
-            ))}
-          </div>
-        </article>
-      </section>
-    </section>
+      {/* Action Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <ActionCard
+          icon="🗺️"
+          title="Continue Your Path"
+          description={`Your next step is: **${nextRoadmapStep.title} (${nextRoadmapStep.level})**. ${nextRoadmapStep.goal}`}
+          buttonText="View Full Roadmap"
+          onClick={() => setActivePage('roadmap')}
+          colorClass="bg-rose-300 text-rose-900"
+        />
+        <ActionCard
+          icon="🧠"
+          title="Practice Grammar"
+          description="Review grammar points, study examples, and solidify your understanding of Japanese sentence structure."
+          buttonText="Review Grammar"
+          onClick={() => setActivePage('grammar')}
+          colorClass="bg-sky-300 text-sky-900"
+        />
+        <ActionCard
+          icon="⏱️"
+          title="Take a Mock Test"
+          description="Challenge yourself with a JLPT mock test to gauge your skills and identify areas for improvement."
+          buttonText="Start JLPT Test"
+          onClick={() => setActivePage('jlpt')}
+          colorClass="bg-amber-300 text-amber-900"
+        />
+      </div>
+    </div>
   );
 }
