@@ -1,69 +1,149 @@
-import { query } from "../db.js";
+import supabase from "../db.js";
+import { authenticateToken } from "../middleware/auth.js";
 
 export function registerApiRoutes(app) {
-  // Levels API
-  app.get("/api/levels", async (req, res) => {
+  
+  // ==========================================
+  // VOCABULARY API
+  // ==========================================
+  app.get("/api/vocabulary", async (req, res) => {
     try {
-      const { rows } = await query('SELECT * FROM levels ORDER BY name');
-      res.json(rows);
+      const { data, error } = await supabase.from('vocabulary').select('*').order('id');
+      if (error) throw error;
+      res.json(data);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
 
-  app.get("/api/levels/:id", async (req, res) => {
+  app.get("/api/vocabulary/:id", async (req, res) => {
     try {
-      const { id } = req.params;
-      const { rows } = await query('SELECT * FROM levels WHERE id = $1', [id]);
-      if (rows.length === 0) {
-        return res.status(404).json({ error: 'Level not found' });
-      }
-      res.json(rows[0]);
+      const { data, error } = await supabase.from('vocabulary').select('*').eq('id', req.params.id).single();
+      if (error || !data) return res.status(404).json({ error: 'Vocabulary not found' });
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ==========================================
+  // KANJI API
+  // ==========================================
+  app.get("/api/kanji", async (req, res) => {
+    try {
+      const { data, error } = await supabase.from('kanji').select('*').order('id');
+      if (error) throw error;
+      res.json(data);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
 
-  app.post("/api/levels", async (req, res) => {
+  app.get("/api/kanji/:id", async (req, res) => {
     try {
-      const { name, description } = req.body;
-      const { rows } = await query('INSERT INTO levels(name, description) VALUES($1, $2) RETURNING *', [name, description]);
-      res.status(201).json(rows[0]);
+      const { data, error } = await supabase.from('kanji').select('*').eq('id', req.params.id).single();
+      if (error || !data) return res.status(404).json({ error: 'Kanji not found' });
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ==========================================
+  // GRAMMAR API
+  // ==========================================
+  app.get('/api/grammar', async (req, res) => {
+    try {
+      const { data, error } = await supabase.from('grammar').select('*').order('id');
+      if (error) throw error;
+      res.json(data);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
 
-  app.put("/api/levels/:id", async (req, res) => {
+  app.get('/api/grammar/:id', async (req, res) => {
     try {
-      const { id } = req.params;
-      const { name, description } = req.body;
-      const { rows } = await query('UPDATE levels SET name = $1, description = $2 WHERE id = $3 RETURNING *', [name, description, id]);
-      if (rows.length === 0) {
-        return res.status(404).json({ error: 'Level not found' });
-      }
-      res.json(rows[0]);
+      const { data, error } = await supabase.from('grammar').select('*').eq('id', req.params.id).single();
+      if (error || !data) return res.status(404).json({ error: 'Grammar point not found' });
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ==========================================
+  // LESSONS API
+  // ==========================================
+  app.get('/api/lessons', async (req, res) => {
+    try {
+      const { data, error } = await supabase.from('lessons').select('*').order('level');
+      if (error) throw error;
+      res.json(data);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
 
-  app.delete("/api/levels/:id", async (req, res) => {
+  app.get('/api/lessons/:id', async (req, res) => {
     try {
-      const { id } = req.params;
-      const { rowCount } = await query('DELETE FROM levels WHERE id = $1', [id]);
-      if (rowCount === 0) {
-        return res.status(404).json({ error: 'Level not found' });
-      }
-      res.status(204).send();
+      const { data, error } = await supabase
+        .from('lessons')
+        .select(`
+          *,
+          lesson_vocabulary ( vocabulary ( * ) ),
+          lesson_kanji ( kanji ( * ) ),
+          lesson_grammar ( grammar ( * ) )
+        `)
+        .eq('id', req.params.id)
+        .single();
+        
+      if (error || !data) return res.status(404).json({ error: 'Lesson not found' });
+      
+      // Flatten the nested data structure for the frontend
+      const formattedData = {
+        ...data,
+        vocabulary: data.lesson_vocabulary?.map(lv => lv.vocabulary) || [],
+        kanji: data.lesson_kanji?.map(lk => lk.kanji) || [],
+        grammar: data.lesson_grammar?.map(lg => lg.grammar) || [],
+      };
+      
+      // Clean up the raw join table data
+      delete formattedData.lesson_vocabulary;
+      delete formattedData.lesson_kanji;
+      delete formattedData.lesson_grammar;
+
+      res.json(formattedData);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  // ==========================================
+  // USER PROFILE API (Protected)
+  // ==========================================
+  app.get('/api/users/profile', authenticateToken, async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          users ( email, name, level, streak, exp, role )
+        `)
+        .eq('id', req.user.id)
+        .single();
+      
+      if (error || !data) return res.status(404).json({ error: 'Profile not found' });
+      res.json(data);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
 }
-

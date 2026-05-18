@@ -1,31 +1,15 @@
+// src/state/useVocabState.js
 import { useEffect, useMemo, useState } from "react";
 import { grammarItems, heroMetrics, jlptTests, levelOrder, pageBlueprint, roadmapSteps, studyPillars } from "../data.js";
+import { jwtDecode } from "jwt-decode";
 
 const STORAGE_KEY = "nihongo-kawaii-state";
+const TOKEN_KEY = "nihongo-kawaii-token";
 
-function normalize(value = "") {
-  return String(value).trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function formatTime(date = new Date()) {
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDate(date = new Date()) {
-  return date.toLocaleDateString("en-CA");
-}
-
-function getInitialLevel() {
-  return grammarItems[0]?.level ?? "N5";
-}
-
-function getGrammarForLevel(level) {
-  return grammarItems.filter((item) => item.level === level);
-}
-
-function getTest(level) {
-  return jlptTests[level] ?? jlptTests.N5;
-}
+// --- Helper Functions ---
+function normalize(value = "") { return String(value).trim().toLowerCase().replace(/\s+/g, " "); }
+function formatTime(date = new Date()) { return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+function formatDate(date = new Date()) { return date.toLocaleDateString("en-CA"); }
 
 function scoreTest(test, answers) {
   const questionResults = test.questions.map((question) => {
@@ -46,210 +30,206 @@ function scoreTest(test, answers) {
     return acc;
   }, {});
 
-  return {
-    correct,
-    total,
-    percent,
-    passed: percent >= test.passScore,
-    questionResults,
-    sectionSummary
-  };
+  return { correct, total, percent, passed: percent >= test.passScore, questionResults, sectionSummary };
 }
 
 function createInitialState() {
   return {
     activePage: "home",
-    selectedLevel: getInitialLevel(),
-    selectedGrammarId: grammarItems[0]?.id ?? null,
+    selectedLevel: "N5",
+    selectedGrammarId: null,
     selectedTestLevel: "N5",
     testAnswers: {},
     testSubmitted: false,
     testResult: null,
-    testHistory: []
+    testHistory: [],
+    // Data from API
+    vocabulary: [],
+    kanji: [],
+    grammar: [],
+    lessons: [],
+    // Auth state
+    token: null,
+    user: null,
   };
 }
 
+// --- State Loading ---
 function loadState() {
-  if (typeof window === "undefined") return createInitialState();
+  const initialState = createInitialState();
+  if (typeof window === "undefined") return initialState;
 
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return createInitialState();
-
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      ...createInitialState(),
-      ...parsed,
-      testAnswers: parsed.testAnswers ?? {},
-      testHistory: parsed.testHistory ?? []
-    };
-  } catch {
-    window.localStorage.removeItem(STORAGE_KEY);
-    return createInitialState();
+  const rawState = window.localStorage.getItem(STORAGE_KEY);
+  let parsedState = {};
+  if (rawState) {
+    try {
+      parsedState = JSON.parse(rawState);
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
   }
+  
+  const token = window.localStorage.getItem(TOKEN_KEY);
+  let user = null;
+  if (token) {
+    try {
+      user = jwtDecode(token);
+    } catch {
+      window.localStorage.removeItem(TOKEN_KEY);
+    }
+  }
+
+  return { ...initialState, ...parsedState, token, user };
 }
 
+// --- Main Hook ---
 export function useVocabState() {
   const [state, setState] = useState(loadState);
 
+  // Fetch initial data when authenticated
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (state.token) {
+      fetchAllData();
+    }
+  }, [state.token]);
+
+  async function fetchAllData() {
+    try {
+      const headers = { 'Authorization': `Bearer ${state.token}` };
+      const [vRes, kRes, gRes, lRes] = await Promise.all([
+        fetch('/api/vocabulary', { headers }),
+        fetch('/api/kanji', { headers }),
+        fetch('/api/grammar', { headers }),
+        fetch('/api/lessons', { headers })
+      ]);
+
+      const [vocabulary, kanji, grammar, lessons] = await Promise.all([
+        vRes.json(), kRes.json(), gRes.json(), lRes.json()
+      ]);
+
+      setState(curr => ({ ...curr, vocabulary, kanji, grammar, lessons }));
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    }
+  }
+
+  // Persist app state (excluding auth and heavy data)
+  useEffect(() => {
+    const { token, user, vocabulary, kanji, grammar, lessons, ...appState } = state;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
   }, [state]);
 
-  const roadmap = roadmapSteps;
-  const featuredMetrics = heroMetrics;
-  const blueprints = pageBlueprint;
+  // --- Auth Functions ---
+  async function register({ username, email, password }) {
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password }),
+    });
+    if (!response.ok) {
+      const { error } = await response.json();
+      throw new Error(error || 'Registration failed');
+    }
+    await login({ email, password });
+  }
 
-  const grammarByLevel = useMemo(
-    () =>
-      levelOrder.reduce((acc, level) => {
-        acc[level] = getGrammarForLevel(level);
-        return acc;
-      }, {}),
-    []
-  );
+  async function login({ email, password }) {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    
+    if (!response.ok) {
+      const { error } = await response.json();
+      throw new Error(error || 'Login failed');
+    }
 
-  const currentGrammarList = grammarByLevel[state.selectedLevel] ?? grammarByLevel.N5 ?? [];
-  const selectedGrammar =
-    grammarItems.find((item) => item.id === state.selectedGrammarId) ??
-    currentGrammarList[0] ??
-    grammarItems[0];
+    const { token } = await response.json();
+    const user = jwtDecode(token);
+    
+    window.localStorage.setItem(TOKEN_KEY, token);
+    setState(current => ({ ...current, token, user }));
+  }
+  
+  function logout() {
+    window.localStorage.removeItem(TOKEN_KEY);
+    setState(current => ({ ...current, token: null, user: null }));
+  }
 
-  const currentTest = getTest(state.selectedTestLevel);
+  // --- Memos and Derived State ---
+  const currentGrammarList = useMemo(() => {
+    const levelNum = parseInt(state.selectedLevel.replace('N', ''));
+    return state.grammar.filter(g => g.level === levelNum);
+  }, [state.grammar, state.selectedLevel]);
+
+  const selectedGrammar = state.grammar.find((item) => item.id === state.selectedGrammarId) ?? currentGrammarList[0];
+  const currentTest = jlptTests[state.selectedTestLevel] ?? jlptTests.N5;
   const currentResult = state.testSubmitted ? state.testResult : null;
 
-  const stats = useMemo(() => {
-    const totalGrammar = grammarItems.length;
-    const lockedLevels = new Set(grammarItems.map((item) => item.level));
-    const averageScore = state.testHistory.length
-      ? Math.round(
-          state.testHistory.reduce((sum, entry) => sum + entry.percent, 0) / state.testHistory.length
-        )
-      : 0;
-    const bestScore = state.testHistory.length
-      ? Math.max(...state.testHistory.map((entry) => entry.percent))
-      : 0;
+  const stats = useMemo(() => ({
+    totalGrammar: state.grammar.length,
+    totalVocabulary: state.vocabulary.length,
+    totalKanji: state.kanji.length,
+    totalTests: state.testHistory.length,
+    averageScore: state.testHistory.length ? Math.round(state.testHistory.reduce((sum, entry) => sum + entry.percent, 0) / state.testHistory.length) : 0,
+  }), [state.grammar, state.vocabulary, state.kanji, state.testHistory]);
 
-    return {
-      totalGrammar,
-      totalLevels: lockedLevels.size,
-      totalTests: state.testHistory.length,
-      averageScore,
-      bestScore,
-      latestScore: state.testHistory[0]?.percent ?? 0,
-      selectedLevel: state.selectedLevel,
-      selectedGrammar,
-      currentGrammarList
-    };
-  }, [currentGrammarList, selectedGrammar, state.selectedLevel, state.testHistory]);
-
-  function setActivePage(activePage) {
-    setState((current) => ({ ...current, activePage }));
-  }
-
-  function getNavigationPage(activePage = state.activePage) {
-    if (activePage === "grammar-detail") return "grammar";
-    if (activePage === "jlpt-result") return "jlpt";
-    return activePage;
-  }
-
-  function setSelectedLevel(selectedLevel) {
-    setState((current) => {
-      const nextList = getGrammarForLevel(selectedLevel);
-      return {
-        ...current,
-        selectedLevel,
-        selectedGrammarId: nextList[0]?.id ?? current.selectedGrammarId
-      };
-    });
-  }
-
-  function selectGrammar(selectedGrammarId) {
-    setState((current) => ({ ...current, selectedGrammarId }));
-  }
-
-  function openGrammarDetail(selectedGrammarId) {
-    setState((current) => ({
-      ...current,
-      selectedGrammarId,
-      activePage: "grammar-detail"
-    }));
-  }
-
-  function setTestLevel(selectedTestLevel) {
-    setState((current) => ({
-      ...current,
-      selectedTestLevel,
-      testAnswers: {},
-      testSubmitted: false,
-      testResult: null
-    }));
-  }
-
-  function setTestAnswer(questionId, value) {
-    setState((current) => ({
-      ...current,
-      testAnswers: {
-        ...current.testAnswers,
-        [questionId]: value
-      }
-    }));
-  }
-
-  function resetTest() {
-    setState((current) => ({
-      ...current,
-      testAnswers: {},
-      testSubmitted: false,
-      testResult: null
-    }));
-  }
+  // --- State Updaters ---
+  function setActivePage(activePage) { setState((current) => ({ ...current, activePage })); }
+  function setSelectedLevel(selectedLevel) { setState((current) => ({ ...current, selectedLevel })); }
+  function selectGrammar(selectedGrammarId) { setState((current) => ({ ...current, selectedGrammarId })); }
+  function openGrammarDetail(selectedGrammarId) { setState((current) => ({ ...current, selectedGrammarId, activePage: "grammar-detail" })); }
+  function setSelectedLessonId(selectedLessonId) { setState((current) => ({ ...current, selectedLessonId })); }
+  function setTestLevel(selectedTestLevel) { setState((current) => ({ ...current, selectedTestLevel, testAnswers: {}, testSubmitted: false, testResult: null })); }
+  function setTestAnswer(questionId, value) { setState((current) => ({ ...current, testAnswers: { ...current.testAnswers, [questionId]: value } })); }
+  function resetTest() { setState((current) => ({ ...current, testAnswers: {}, testSubmitted: false, testResult: null })); }
 
   function submitTest() {
-    let nextResult = null;
-
     setState((current) => {
       if (current.testSubmitted) return current;
-
-      const result = scoreTest(getTest(current.selectedTestLevel), current.testAnswers);
-      nextResult = result;
-
+      const test = jlptTests[current.selectedTestLevel] ?? jlptTests.N5;
+      const result = scoreTest(test, current.testAnswers);
       return {
         ...current,
         testSubmitted: true,
         testResult: result,
         activePage: "jlpt-result",
-        testHistory: [
-          {
-            id: `${current.selectedTestLevel}-${Date.now()}`,
-            level: current.selectedTestLevel,
-            percent: result.percent,
-            correct: result.correct,
-            total: result.total,
-            passed: result.passed,
-            at: formatDate(),
-            time: formatTime()
-          },
-          ...current.testHistory
-        ]
+        testHistory: [{
+          id: `${current.selectedTestLevel}-${Date.now()}`,
+          level: current.selectedTestLevel,
+          percent: result.percent,
+          correct: result.correct,
+          total: result.total,
+          passed: result.passed,
+          at: formatDate(),
+          time: formatTime()
+        }, ...current.testHistory],
       };
     });
-
-    return nextResult;
   }
-
+  
   return {
+    // State
     state,
-    navigationPage: getNavigationPage(),
+    user: state.user,
+    isAuthenticated: !!state.token,
+    
+    // Data
     stats,
     currentTest,
     currentResult,
     selectedGrammar,
     currentGrammarList,
-    roadmap,
-    featuredMetrics,
-    blueprints,
+    vocabulary: state.vocabulary,
+    kanji: state.kanji,
+    grammar: state.grammar,
+    lessons: state.lessons,
+    roadmap: roadmapSteps,
+    blueprints: pageBlueprint,
     studyPillars,
+    
+    // Actions
     setActivePage,
     setSelectedLevel,
     selectGrammar,
@@ -257,6 +237,10 @@ export function useVocabState() {
     setTestLevel,
     setTestAnswer,
     submitTest,
-    resetTest
+    resetTest,
+    login,
+    register,
+    logout,
+    refreshData: fetchAllData
   };
 }

@@ -4,6 +4,8 @@ CREATE TABLE users (
     username VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    subscription_tier VARCHAR(50) DEFAULT 'free' NOT NULL, -- 'free' or 'paid'
+    role VARCHAR(50) DEFAULT 'user' NOT NULL, -- 'user' or 'admin'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
