@@ -14,9 +14,9 @@ export default function JlptPage({
       <div className="bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 text-white p-8 sm:p-12 rounded-3xl shadow-lg">
         <p className="text-sm font-bold uppercase tracking-widest opacity-90">JLPT mock test</p>
         <h1 className="text-3xl sm:text-4xl font-extrabold mt-3 mb-4">Tầng làm đề riêng trước khi xem kết quả.</h1>
-        <p className="text-lg opacity-95 mb-6">
+        {/* <p className="text-lg opacity-95 mb-6">
           Trang này chỉ tập trung vào việc chọn level và trả lời câu hỏi. Sau khi chấm điểm, hệ thống sẽ chuyển sang trang kết quả riêng.
-        </p>
+        </p> */}
         <div className="flex items-center gap-4">
           <span className="text-sm opacity-80">UI wireframe</span>
           <strong className="text-xl">Test layer</strong>

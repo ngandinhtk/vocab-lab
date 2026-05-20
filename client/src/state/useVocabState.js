@@ -30,7 +30,8 @@ function scoreTest(test, answers) {
     return acc;
   }, {});
 
-  return { correct, total, percent, passed: percent >= test.passScore, questionResults, sectionSummary };
+  const passThreshold = test.passScore || test.pass_score || 60;
+  return { correct, total, percent, passed: percent >= passThreshold, questionResults, sectionSummary };
 }
 
 function createInitialState() {
@@ -43,6 +44,8 @@ function createInitialState() {
     testSubmitted: false,
     testResult: null,
     testHistory: [],
+    jlptTests: [],
+    selectedLessonId: null,
     // Data from API
     vocabulary: [],
     kanji: [],
@@ -93,29 +96,60 @@ export function useVocabState() {
     }
   }, [state.token]);
 
+  // Fetch JLPT tests when level changes
+  useEffect(() => {
+    if (state.token) {
+      fetchJlptTests(state.selectedTestLevel);
+    }
+  }, [state.token, state.selectedTestLevel]);
+
   async function fetchAllData() {
     try {
       const headers = { 'Authorization': `Bearer ${state.token}` };
-      const [vRes, kRes, gRes, lRes] = await Promise.all([
+      const [vRes, kRes, gRes, lRes, hRes] = await Promise.all([
         fetch('/api/vocabulary', { headers }),
         fetch('/api/kanji', { headers }),
         fetch('/api/grammar', { headers }),
-        fetch('/api/lessons', { headers })
+        fetch('/api/lessons', { headers }),
+        fetch('/api/jlpt/history', { headers })
       ]);
 
-      const [vocabulary, kanji, grammar, lessons] = await Promise.all([
-        vRes.json(), kRes.json(), gRes.json(), lRes.json()
+      const [vocabulary, kanji, grammar, lessons, testHistory] = await Promise.all([
+        vRes.json(), kRes.json(), gRes.json(), lRes.json(), hRes.json()
       ]);
 
-      setState(curr => ({ ...curr, vocabulary, kanji, grammar, lessons }));
+      // Map backend history to frontend format if needed
+      const mappedHistory = testHistory.map(h => ({
+        id: h.id,
+        level: `N${h.test.level}`,
+        percent: h.percent,
+        correct: h.score,
+        total: h.total,
+        passed: h.passed,
+        at: new Date(h.created_at).toLocaleDateString("en-CA"),
+        time: new Date(h.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      }));
+
+      setState(curr => ({ ...curr, vocabulary, kanji, grammar, lessons, testHistory: mappedHistory }));
     } catch (err) {
       console.error("Failed to fetch data:", err);
     }
   }
 
+  async function fetchJlptTests(level) {
+    try {
+      const headers = { 'Authorization': `Bearer ${state.token}` };
+      const res = await fetch(`/api/jlpt/tests/${level}`, { headers });
+      const jlptTests = await res.json();
+      setState(curr => ({ ...curr, jlptTests }));
+    } catch (err) {
+      console.error("Failed to fetch JLPT tests:", err);
+    }
+  }
+
   // Persist app state (excluding auth and heavy data)
   useEffect(() => {
-    const { token, user, vocabulary, kanji, grammar, lessons, ...appState } = state;
+    const { token, user, vocabulary, kanji, grammar, lessons, jlptTests, ...appState } = state;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
   }, [state]);
 
@@ -164,7 +198,13 @@ export function useVocabState() {
   }, [state.grammar, state.selectedLevel]);
 
   const selectedGrammar = state.grammar.find((item) => item.id === state.selectedGrammarId) ?? currentGrammarList[0];
-  const currentTest = jlptTests[state.selectedTestLevel] ?? jlptTests.N5;
+  
+  const rawTest = state.jlptTests[0];
+  const currentTest = rawTest ? { 
+    ...rawTest, 
+    passScore: rawTest.passScore || rawTest.pass_score 
+  } : { title: "Loading...", passScore: 70, questions: [], description: "..." };
+
   const currentResult = state.testSubmitted ? state.testResult : null;
 
   const stats = useMemo(() => ({
@@ -185,28 +225,51 @@ export function useVocabState() {
   function setTestAnswer(questionId, value) { setState((current) => ({ ...current, testAnswers: { ...current.testAnswers, [questionId]: value } })); }
   function resetTest() { setState((current) => ({ ...current, testAnswers: {}, testSubmitted: false, testResult: null })); }
 
-  function submitTest() {
-    setState((current) => {
-      if (current.testSubmitted) return current;
-      const test = jlptTests[current.selectedTestLevel] ?? jlptTests.N5;
-      const result = scoreTest(test, current.testAnswers);
-      return {
-        ...current,
-        testSubmitted: true,
-        testResult: result,
-        activePage: "jlpt-result",
-        testHistory: [{
-          id: `${current.selectedTestLevel}-${Date.now()}`,
-          level: current.selectedTestLevel,
-          percent: result.percent,
-          correct: result.correct,
+  async function submitTest() {
+    if (state.testSubmitted) return;
+    
+    const test = state.jlptTests[0];
+    if (!test) return;
+
+    const result = scoreTest(test, state.testAnswers);
+    
+    // Save to backend
+    try {
+      await fetch('/api/jlpt/results', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({
+          testId: test.id,
+          score: result.correct,
           total: result.total,
+          percent: result.percent,
           passed: result.passed,
-          at: formatDate(),
-          time: formatTime()
-        }, ...current.testHistory],
-      };
-    });
+          sectionSummary: result.sectionSummary
+        })
+      });
+    } catch (err) {
+      console.error("Failed to save test result:", err);
+    }
+
+    setState((current) => ({
+      ...current,
+      testSubmitted: true,
+      testResult: result,
+      activePage: "jlpt-result",
+      testHistory: [{
+        id: `${current.selectedTestLevel}-${Date.now()}`,
+        level: current.selectedTestLevel,
+        percent: result.percent,
+        correct: result.correct,
+        total: result.total,
+        passed: result.passed,
+        at: formatDate(),
+        time: formatTime()
+      }, ...current.testHistory],
+    }));
   }
   
   return {
@@ -234,6 +297,7 @@ export function useVocabState() {
     setSelectedLevel,
     selectGrammar,
     openGrammarDetail,
+    setSelectedLessonId,
     setTestLevel,
     setTestAnswer,
     submitTest,

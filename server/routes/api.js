@@ -102,14 +102,18 @@ export function registerApiRoutes(app) {
         .eq('id', req.params.id)
         .single();
         
-      if (error || !data) return res.status(404).json({ error: 'Lesson not found' });
+      if (error || !data) {
+        console.error('Supabase error:', error);
+        return res.status(404).json({ error: 'Lesson not found' });
+      }
       
       // Flatten the nested data structure for the frontend
+      // Supabase returns an array of objects for the join, we map it to just the content
       const formattedData = {
         ...data,
-        vocabulary: data.lesson_vocabulary?.map(lv => lv.vocabulary) || [],
-        kanji: data.lesson_kanji?.map(lk => lk.kanji) || [],
-        grammar: data.lesson_grammar?.map(lg => lg.grammar) || [],
+        vocabulary: data.lesson_vocabulary?.map(lv => lv.vocabulary).filter(Boolean) || [],
+        kanji: data.lesson_kanji?.map(lk => lk.kanji).filter(Boolean) || [],
+        grammar: data.lesson_grammar?.map(lg => lg.grammar).filter(Boolean) || [],
       };
       
       // Clean up the raw join table data
@@ -118,6 +122,72 @@ export function registerApiRoutes(app) {
       delete formattedData.lesson_grammar;
 
       res.json(formattedData);
+    } catch (err) {
+      console.error('Server error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ==========================================
+  // JLPT API
+  // ==========================================
+  app.get('/api/jlpt/tests/:level', async (req, res) => {
+    try {
+      const level = parseInt(req.params.level.replace('N', ''));
+      const { data, error } = await supabase
+        .from('jlpt_tests')
+        .select(`
+          *,
+          questions:jlpt_questions(*)
+        `)
+        .eq('level', level);
+      
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/jlpt/results', authenticateToken, async (req, res) => {
+    try {
+      const { testId, score, total, percent, passed, sectionSummary } = req.body;
+      const { data, error } = await supabase
+        .from('jlpt_results')
+        .insert([{
+          user_id: req.user.id,
+          test_id: testId,
+          score,
+          total,
+          percent,
+          passed,
+          section_summary: sectionSummary
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      res.json(data);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/jlpt/history', authenticateToken, async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('jlpt_results')
+        .select(`
+          *,
+          test:jlpt_tests(title, level)
+        `)
+        .eq('user_id', req.user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      res.json(data);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Internal server error' });

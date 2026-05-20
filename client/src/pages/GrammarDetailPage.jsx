@@ -40,14 +40,13 @@ export default function GrammarDetailPage({
               >
                 <strong className="block">{item.title}</strong>
                 <span className={`text-xs mt-1 block ${selectedGrammar?.id === item.id ? 'opacity-90' : 'text-gray-500'}`}>
-                  {item.structure}
+                  N{item.level}
                 </span>
                 <p className={`text-sm mt-2 line-clamp-1 ${selectedGrammar?.id === item.id ? 'opacity-90' : 'text-gray-600'}`}>
-                  {item.meaning}
+                  {item.explanation}
                 </p>
                 <div className={`flex gap-2 mt-2 text-xs ${selectedGrammar?.id === item.id ? 'opacity-80' : 'opacity-60'}`}>
-                  <span>{item.level}</span>
-                  <span>{item.examples.length} ví dụ</span>
+                  <span>{item.examples?.length || 0} ví dụ</span>
                 </div>
               </button>
             ))}
@@ -76,7 +75,7 @@ export default function GrammarDetailPage({
           <div className="mb-8">
             <p className="text-sm font-bold uppercase tracking-widest text-teal-500">Detail view</p>
             <h2 className="text-2xl font-bold text-gray-900 mt-2">{selectedGrammar?.title ?? "Chưa chọn mẫu"}</h2>
-            <span className="text-gray-500 text-sm mt-1 block">Trang này tách riêng để tạo cảm giác nhiều tầng nội dung.</span>
+            {/* <span className="text-gray-500 text-sm mt-1 block">Trang này tách riêng để tạo cảm giác nhiều tầng nội dung.</span> */}
           </div>
 
           {selectedGrammar ? (
@@ -85,43 +84,29 @@ export default function GrammarDetailPage({
               <div className="bg-gradient-to-r from-teal-50 to-emerald-50 p-6 rounded-xl mb-8 border border-teal-100">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-bold text-teal-600 uppercase">{selectedGrammar.level}</p>
+                    <p className="text-sm font-bold text-teal-600 uppercase">N{selectedGrammar.level}</p>
                     <strong className="text-2xl text-gray-900">{selectedGrammar.title}</strong>
                   </div>
-                  <span className="bg-teal-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
-                    {selectedGrammar.structure}
-                  </span>
                 </div>
               </div>
 
               {/* Detail Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Ý nghĩa</dt>
-                  <dd className="text-gray-800 font-medium">{selectedGrammar.meaning}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Ghi chú</dt>
-                  <dd className="text-gray-800 font-medium">{selectedGrammar.notes}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Mẹo nhớ</dt>
-                  <dd className="text-gray-800 font-medium">{selectedGrammar.tips}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-bold uppercase text-gray-500 mb-2">Cách dùng</dt>
-                  <dd className="text-gray-800 font-medium">Đặt câu mới bằng đúng cấu trúc rồi so với ví dụ mẫu.</dd>
-                </div>
+              <div className="mb-8">
+                <dt className="text-sm font-bold uppercase text-gray-500 mb-4">Giải thích & Cấu trúc</dt>
+                <dd className="text-gray-800 font-medium whitespace-pre-wrap leading-relaxed bg-gray-50 p-6 rounded-xl border border-gray-100">
+                  {selectedGrammar.explanation}
+                </dd>
               </div>
 
               {/* Examples Section */}
               <div className="mb-8">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Ví dụ</h3>
                 <div className="space-y-3">
-                  {selectedGrammar.examples.map((example) => (
-                    <div key={example.ja} className="bg-emerald-50 border border-emerald-100 p-5 rounded-xl">
+                  {selectedGrammar.examples?.map((example, idx) => (
+                    <div key={idx} className="bg-emerald-50 border border-emerald-100 p-5 rounded-xl">
                       <strong className="block text-gray-900 mb-2 text-lg">{example.ja}</strong>
-                      <p className="text-gray-700">{example.vi}</p>
+                      {example.vi && <p className="text-gray-700 mb-1 font-medium">{example.vi}</p>}
+                      {example.en && <p className="text-gray-500 italic">{example.en}</p>}
                     </div>
                   ))}
                 </div>

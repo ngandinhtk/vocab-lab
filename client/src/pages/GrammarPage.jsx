@@ -7,12 +7,12 @@ import React, { useState } from 'react';
 export default function GrammarPage({ grammar = [], setActivePage, setSelectedGrammar }) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter logic for title and meaning
+  // Filter logic for title and explanation
   const filteredGrammar = grammar.filter((item) => {
     const query = searchQuery.toLowerCase();
     return (
-      item.title.toLowerCase().includes(query) ||
-      item.meaning.toLowerCase().includes(query)
+      item.title?.toLowerCase().includes(query) ||
+      item.explanation?.toLowerCase().includes(query)
     );
   });
 
@@ -53,7 +53,7 @@ export default function GrammarPage({ grammar = [], setActivePage, setSelectedGr
                 </div>
               </div>
               <p className="text-gray-600 line-clamp-3 leading-relaxed mb-6 italic">
-                {item.explanation || item.meaning}
+                {item.explanation}
               </p>
               
               <div className="flex items-center text-pink-500 font-bold text-sm">

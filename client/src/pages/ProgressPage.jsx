@@ -8,9 +8,9 @@ export default function ProgressPage({
       <div className="bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 text-white p-8 sm:p-12 rounded-3xl shadow-lg">
         <p className="text-sm font-bold uppercase tracking-widest opacity-90">Tiến độ</p>
         <h1 className="text-3xl sm:text-4xl font-extrabold mt-3 mb-4">Nhìn rõ điểm số, lịch sử và nhịp học của bạn.</h1>
-        <p className="text-lg opacity-95">
+        {/* <p className="text-lg opacity-95">
           Trang này gom các tín hiệu học tập: số đề đã làm, điểm trung bình, điểm cao nhất và lịch sử gần đây.
-        </p>
+        </p> */}
       </div>
 
       {/* Content Grid */}
