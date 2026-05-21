@@ -114,6 +114,13 @@ export function useVocabState() {
         fetch('/api/jlpt/history', { headers })
       ]);
 
+      // Check if all responses are ok before parsing
+      if (!vRes.ok) throw new Error(`Vocabulary API failed: ${vRes.status} ${vRes.statusText}`);
+      if (!kRes.ok) throw new Error(`Kanji API failed: ${kRes.status} ${kRes.statusText}`);
+      if (!gRes.ok) throw new Error(`Grammar API failed: ${gRes.status} ${gRes.statusText}`);
+      if (!lRes.ok) throw new Error(`Lessons API failed: ${lRes.status} ${lRes.statusText}`);
+      if (!hRes.ok) throw new Error(`JLPT history API failed: ${hRes.status} ${hRes.statusText}`);
+
       const [vocabulary, kanji, grammar, lessons, testHistory] = await Promise.all([
         vRes.json(), kRes.json(), gRes.json(), lRes.json(), hRes.json()
       ]);
@@ -140,6 +147,11 @@ export function useVocabState() {
     try {
       const headers = { 'Authorization': `Bearer ${state.token}` };
       const res = await fetch(`/api/jlpt/tests/${level}`, { headers });
+      
+      if (!res.ok) {
+        throw new Error(`JLPT tests API failed: ${res.status} ${res.statusText}`);
+      }
+      
       const jlptTests = await res.json();
       setState(curr => ({ ...curr, jlptTests }));
     } catch (err) {
@@ -153,6 +165,26 @@ export function useVocabState() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
   }, [state]);
 
+  // --- Auth Helpers ---
+  async function parseJsonSafe(response) {
+    const contentType = response.headers.get('content-type') || '';
+    const bodyText = await response.text();
+
+    if (!bodyText) {
+      return null;
+    }
+
+    if (!contentType.includes('application/json')) {
+      throw new Error(bodyText);
+    }
+
+    try {
+      return JSON.parse(bodyText);
+    } catch (err) {
+      throw new Error(`Invalid JSON response from server: ${err.message}`);
+    }
+  }
+
   // --- Auth Functions ---
   async function register({ username, email, password }) {
     const response = await fetch('/api/auth/register', {
@@ -160,10 +192,18 @@ export function useVocabState() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
     });
+
     if (!response.ok) {
-      const { error } = await response.json();
-      throw new Error(error || 'Registration failed');
+      let errorMessage = `Registration failed: ${response.status} ${response.statusText}`;
+      try {
+        const data = await parseJsonSafe(response);
+        if (data && data.error) errorMessage = data.error;
+      } catch (err) {
+        if (err.message) errorMessage = err.message;
+      }
+      throw new Error(errorMessage);
     }
+
     await login({ email, password });
   }
 
@@ -175,11 +215,22 @@ export function useVocabState() {
     });
     
     if (!response.ok) {
-      const { error } = await response.json();
-      throw new Error(error || 'Login failed');
+      let errorMessage = `Login failed: ${response.status} ${response.statusText}`;
+      try {
+        const data = await parseJsonSafe(response);
+        if (data && data.error) errorMessage = data.error;
+      } catch (err) {
+        if (err.message) errorMessage = err.message;
+      }
+      throw new Error(errorMessage);
     }
 
-    const { token } = await response.json();
+    const data = await parseJsonSafe(response);
+    if (!data || !data.token) {
+      throw new Error('Login response did not include a valid token.');
+    }
+
+    const { token } = data;
     const user = jwtDecode(token);
     
     window.localStorage.setItem(TOKEN_KEY, token);
