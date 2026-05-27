@@ -34,6 +34,7 @@ CREATE TABLE jlpt_questions (
     level_id INTEGER REFERENCES levels(id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
     question_type VARCHAR(50),
+    passage TEXT,
     options TEXT[],
     correct_answer_index INTEGER,
     explanation TEXT

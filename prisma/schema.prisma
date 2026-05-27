@@ -75,3 +75,18 @@ model TestResult {
 
   @@map("test_results")
 }
+
+model UserProgress {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  lessonId    Int      @map("lesson_id")
+  status      String   @default("in-progress")
+  score       Int?
+  completedAt DateTime? @map("completed_at")
+  lastReview  DateTime? @map("last_review")
+  updatedAt   DateTime  @default(now()) @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, lessonId])
+  @@map("user_progress")
+}

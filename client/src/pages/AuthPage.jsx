@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 
 // AuthPage component for user login and registration.
 // It takes `onLogin` and `onRegister` functions as props, which handle the authentication logic.
-export default function AuthPage({ onLogin, onRegister }) {
+export default function AuthPage({ onLogin, onRegister, language, setLanguage, t }) {
   // State to toggle between login and registration modes.
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const getLabel = (key, fallback) => (typeof t === 'function' ? t(key) : fallback);
   // State for username input (only visible in registration mode).
   const [username, setUsername] = useState('');
   // State for email input.
@@ -24,7 +25,7 @@ export default function AuthPage({ onLogin, onRegister }) {
 
     // Basic client-side validation
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+      setError(getLabel('auth.passwordMinError', 'Password must be at least 6 characters long.'));
       return;
     }
 
@@ -50,14 +51,24 @@ export default function AuthPage({ onLogin, onRegister }) {
       {/* Card-like container for the form */}
       <div className="w-full max-w-md p-10 space-y-8 bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-white animate-fade-in">
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {isLoginMode ? 'Welcome Back!' : 'Create Your Account'}
-          </h1>
-          {/* Dynamic subtitle based on the current mode */}
-          <p className="mt-2 text-gray-600">
-            {isLoginMode ? "Let's continue your learning journey." : 'Join us to start learning Japanese!'}
-          </p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isLoginMode ? getLabel('auth.welcomeBack', 'Welcome Back!') : getLabel('auth.createAccount', 'Create Your Account')}
+            </h1>
+            <p className="mt-2 text-gray-600">
+              {isLoginMode ? getLabel('auth.loginSub', "Let's continue your learning journey.") : getLabel('auth.registerSub', 'Join us to start learning Japanese!')}
+            </p>
+          </div>
+          {typeof setLanguage === 'function' && (
+            <button
+              type="button"
+              onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+              className="rounded-2xl border border-pink-100 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-100 transition-all"
+            >
+              {language === 'vi' ? 'EN' : 'VI'}
+            </button>
+          )}
         </div>
 
         {/* Form */}
@@ -66,7 +77,7 @@ export default function AuthPage({ onLogin, onRegister }) {
           {!isLoginMode && (
             <div>
               <label htmlFor="username" className="text-sm font-medium text-gray-700">
-                Username
+                {getLabel('auth.username', 'Username')}
               </label>
               <input
                 id="username"
@@ -77,14 +88,14 @@ export default function AuthPage({ onLogin, onRegister }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-4 py-3 mt-1 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all bg-white/50"
-                placeholder="Your username"
+                placeholder={getLabel('auth.placeholderUsername', 'Your username')}
               />
             </div>
           )}
           {/* Email input */}
           <div>
             <label htmlFor="email" className="text-sm font-medium text-gray-700">
-              Email address
+              {getLabel('auth.email', 'Email')}
             </label>
             <input
               id="email"
@@ -96,13 +107,13 @@ export default function AuthPage({ onLogin, onRegister }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 mt-1 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all bg-white/50"
-              placeholder="you@example.com"
+              placeholder={getLabel('auth.placeholderEmail', 'you@example.com')}
             />
             {/* Password input */}
           </div>
           <div>
             <label htmlFor="password" className="text-sm font-medium text-gray-700">
-              Password
+              {getLabel('auth.password', 'Password')}
             </label>
             <input
               id="password"
@@ -114,7 +125,7 @@ export default function AuthPage({ onLogin, onRegister }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 mt-1 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all bg-white/50"
-              placeholder="Your password"
+              placeholder={getLabel('auth.placeholderPassword', 'Your password')}
             />
           </div>
 
@@ -132,7 +143,7 @@ export default function AuthPage({ onLogin, onRegister }) {
               disabled={isLoading}
               className={`w-full px-4 py-4 font-bold text-white bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all shadow-lg active:scale-[0.98] ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLoading ? 'Processing...' : (isLoginMode ? 'Log In' : 'Create Account')}
+              {isLoading ? getLabel('auth.processing', 'Processing...') : (isLoginMode ? getLabel('auth.logIn', 'Log In') : getLabel('auth.createAccountButton', 'Create Account'))}
             </button>
           </div>
         </form>
@@ -143,7 +154,7 @@ export default function AuthPage({ onLogin, onRegister }) {
             onClick={() => setIsLoginMode(!isLoginMode)}
             className="text-sm text-pink-600 hover:underline"
           >
-            {isLoginMode ? 'Need an account? Sign up' : 'Already have an account? Log in'}
+            {isLoginMode ? getLabel('auth.needAccount', 'Need an account? Sign up') : getLabel('auth.haveAccount', 'Already have an account? Log in')}
           </button>
         </div>
       </div>

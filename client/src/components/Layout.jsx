@@ -2,20 +2,18 @@
 import React, { useState } from "react";
 import Navigation from "./Navigation.jsx";
 
-export default function Layout({ user, activePage, setActivePage, onLogout, children }) {
+export default function Layout({ user, activePage, setActivePage, onLogout, children, language, setLanguage, t }) {
   const [isMobileNavOpen, setMobileNavOpen] = useState(false);
-  const pageMeta = {
-    home: { title: "Dashboard", subtitle: `Welcome back, ${user.username}!` },
-    roadmap: { title: "Roadmap", subtitle: "Your path from N5 to N1." },
-    grammar: { title: "Grammar", subtitle: "Explore Japanese grammar points by JLPT level." },
-    "grammar-detail": { title: "Grammar Detail", subtitle: "Detailed view of a grammar point." },
-    jlpt: { title: "JLPT Practice", subtitle: "Test your knowledge with mock exams." },
-    "jlpt-result": { title: "JLPT Results", subtitle: "Review your test performance." },
-    progress: { title: "Progress", subtitle: "Track your learning history and stats." },
+  const displayName = user?.username || user?.name || '';
+  const defaultMeta = {
+    title: t?.('layout.pageMeta.home.title') ?? 'Dashboard',
+    subtitle: t?.('layout.pageMeta.home.subtitle') ?? `Welcome back, ${displayName || 'learner'}!`
   };
-  
-  const currentMeta = pageMeta[activePage] || { title: "Nihongo Kawaii", subtitle: "A cute way to learn Japanese." };
-  const userInitials = user.username ? user.username.slice(0, 2).toUpperCase() : '??';
+  const currentMeta = {
+    title: t?.(`layout.pageMeta.${activePage}.title`) ?? defaultMeta.title,
+    subtitle: t?.(`layout.pageMeta.${activePage}.subtitle`) ?? defaultMeta.subtitle
+  };
+  const userInitials = displayName ? displayName.slice(0, 2).toUpperCase() : '??';
 
   const closeMobileNav = () => setMobileNavOpen(false);
   const toggleMobileNav = () => setMobileNavOpen((value) => !value);
@@ -37,14 +35,14 @@ export default function Layout({ user, activePage, setActivePage, onLogout, chil
           <button type="button" className="flex items-center space-x-3" onClick={() => { setActivePage("home"); closeMobileNav(); }}>
             <span className="text-3xl text-pink-500 bg-pink-50 w-12 h-12 flex items-center justify-center rounded-2xl shadow-inner">語</span>
             <div className="text-left">
-              <strong className="text-lg font-black tracking-tight text-gray-900">Nihongo Kawaii</strong>
-              <small className="block text-[10px] font-bold uppercase tracking-widest text-pink-400">Master Japanese</small>
+              <strong className="text-lg font-black tracking-tight text-gray-900">{t?.('layout.brand') ?? 'Nihongo Kawaii'}</strong>
+              <small className="block text-[10px] font-bold uppercase tracking-widest text-pink-400">{t?.('layout.brandSub') ?? 'Master Japanese'}</small>
             </div>
           </button>
         </div>
         
         <div className="flex-grow overflow-y-auto">
-          <Navigation activePage={activePage} setActivePage={setActivePage} onNavigate={closeMobileNav} />
+          <Navigation activePage={activePage} setActivePage={setActivePage} onNavigate={closeMobileNav} t={t} />
         </div>
 
         {/* Footer with Logout */}
@@ -54,7 +52,7 @@ export default function Layout({ user, activePage, setActivePage, onLogout, chil
             className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-sm font-bold text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-all active:scale-95"
           >
             <span>👋</span>
-            Log Out
+            {t?.('layout.logout') ?? 'Log Out'}
           </button>
         </div>
       </aside>
@@ -75,9 +73,16 @@ export default function Layout({ user, activePage, setActivePage, onLogout, chil
               <p className="text-sm text-gray-500">{currentMeta.subtitle}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setLanguage?.(language === 'vi' ? 'en' : 'vi')}
+              className="rounded-2xl border border-pink-100 bg-pink-50 px-4 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-100 transition-all"
+            >
+              {language === 'vi' ? 'EN' : 'VI'}
+            </button>
             <span className="text-sm font-medium">
-              Tier: <span className="font-bold text-pink-600">{user.subscription_tier}</span>
+              Tier: <span className="font-bold text-pink-600">{user?.subscription_tier || 'free'}</span>
             </span>
             <div className="w-10 h-10 rounded-full bg-pink-200 text-pink-600 flex items-center justify-center font-bold">
               {userInitials}

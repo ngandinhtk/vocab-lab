@@ -101,9 +101,11 @@
         id SERIAL PRIMARY KEY,
         user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
         lesson_id INTEGER REFERENCES public.lessons(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'in-progress',
         score INTEGER,
         completed_at TIMESTAMPTZ DEFAULT NOW(),
         last_review TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(user_id, lesson_id)
     );
 

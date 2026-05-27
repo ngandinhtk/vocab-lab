@@ -1,15 +1,32 @@
 // src/state/useVocabState.js
 import { useEffect, useMemo, useState } from "react";
-import { grammarItems, heroMetrics, jlptTests, levelOrder, pageBlueprint, roadmapSteps, studyPillars } from "../data.js";
+import { translate } from "../i18n.js";
+import { grammarItems, heroMetrics, levelOrder, pageBlueprint, roadmapSteps, studyPillars } from "../data.js";
+import { jlptTests as localJlptTests } from "../jlptBank.js";
 import { jwtDecode } from "jwt-decode";
 
 const STORAGE_KEY = "nihongo-kawaii-state";
 const TOKEN_KEY = "nihongo-kawaii-token";
+const progressRank = {
+  'not-started': 0,
+  'in-progress': 1,
+  'completed': 2
+};
 
 // --- Helper Functions ---
 function normalize(value = "") { return String(value).trim().toLowerCase().replace(/\s+/g, " "); }
 function formatTime(date = new Date()) { return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
 function formatDate(date = new Date()) { return date.toLocaleDateString("en-CA"); }
+
+function normalizeAuthUser(user = {}) {
+  return {
+    ...user,
+    username: user.username || user.name || '',
+    name: user.name || user.username || '',
+    subscription_tier: user.subscription_tier || 'free',
+    role: user.role || 'user',
+  };
+}
 
 function scoreTest(test, answers) {
   const questionResults = test.questions.map((question) => {
@@ -45,7 +62,10 @@ function createInitialState() {
     testResult: null,
     testHistory: [],
     jlptTests: [],
+    testAttemptId: 0,
     selectedLessonId: null,
+    lessonProgress: {},
+    language: "vi",
     // Data from API
     vocabulary: [],
     kanji: [],
@@ -55,6 +75,35 @@ function createInitialState() {
     token: null,
     user: null,
   };
+}
+
+function mergeLessonProgress(localProgress = {}, remoteProgress = {}) {
+  const merged = { ...localProgress };
+
+  for (const [lessonId, remoteEntry] of Object.entries(remoteProgress || {})) {
+    const localEntry = merged[lessonId];
+
+    if (!localEntry) {
+      merged[lessonId] = remoteEntry;
+      continue;
+    }
+
+    const localScore = progressRank[localEntry.status] ?? 0;
+    const remoteScore = progressRank[remoteEntry.status] ?? 0;
+
+    if (remoteScore > localScore) {
+      merged[lessonId] = remoteEntry;
+      continue;
+    }
+
+    if (remoteScore === localScore) {
+      const localTime = new Date(localEntry.updatedAt || 0).getTime();
+      const remoteTime = new Date(remoteEntry.updatedAt || 0).getTime();
+      if (remoteTime > localTime) merged[lessonId] = remoteEntry;
+    }
+  }
+
+  return merged;
 }
 
 // --- State Loading ---
@@ -76,7 +125,7 @@ function loadState() {
   let user = null;
   if (token) {
     try {
-      user = jwtDecode(token);
+      user = normalizeAuthUser(jwtDecode(token));
     } catch {
       window.localStorage.removeItem(TOKEN_KEY);
     }
@@ -138,8 +187,63 @@ export function useVocabState() {
       }));
 
       setState(curr => ({ ...curr, vocabulary, kanji, grammar, lessons, testHistory: mappedHistory }));
+
+      await fetchLessonProgress();
     } catch (err) {
       console.error("Failed to fetch data:", err);
+    }
+  }
+
+  async function fetchLessonProgress() {
+    if (!state.token) return;
+
+    try {
+      const res = await fetch('/api/lesson-progress', {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+
+      if (!res.ok) return;
+
+      const remoteProgress = await res.json();
+      setState((curr) => ({
+        ...curr,
+        lessonProgress: mergeLessonProgress(curr.lessonProgress, remoteProgress)
+      }));
+    } catch (err) {
+      console.error("Failed to fetch lesson progress:", err);
+    }
+  }
+
+  async function syncLessonProgress(lessonId, status) {
+    if (!state.token || !lessonId || !status) return;
+
+    try {
+      const res = await fetch(`/api/lesson-progress/${lessonId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Lesson progress sync failed: ${res.status} ${res.statusText}`);
+      }
+
+      const saved = await res.json();
+      setState((curr) => ({
+        ...curr,
+        lessonProgress: {
+          ...curr.lessonProgress,
+          [String(saved.lessonId)]: {
+            status: saved.status,
+            updatedAt: saved.updatedAt
+          }
+        }
+      }));
+    } catch (err) {
+      console.error("Failed to sync lesson progress:", err);
     }
   }
 
@@ -153,9 +257,21 @@ export function useVocabState() {
       }
       
       const jlptTests = await res.json();
-      setState(curr => ({ ...curr, jlptTests }));
+      const fallbackTest = localJlptTests[level];
+      const resolvedTests = Array.isArray(jlptTests) && jlptTests.length
+        ? jlptTests
+        : fallbackTest
+          ? [fallbackTest]
+          : [];
+
+      setState(curr => ({ ...curr, jlptTests: resolvedTests }));
     } catch (err) {
       console.error("Failed to fetch JLPT tests:", err);
+      const fallbackTest = localJlptTests[state.selectedTestLevel];
+      setState((curr) => ({
+        ...curr,
+        jlptTests: fallbackTest ? [fallbackTest] : curr.jlptTests
+      }));
     }
   }
 
@@ -231,7 +347,7 @@ export function useVocabState() {
     }
 
     const { token } = data;
-    const user = jwtDecode(token);
+    const user = normalizeAuthUser(jwtDecode(token));
     
     window.localStorage.setItem(TOKEN_KEY, token);
     setState(current => ({ ...current, token, user }));
@@ -251,10 +367,17 @@ export function useVocabState() {
   const selectedGrammar = state.grammar.find((item) => item.id === state.selectedGrammarId) ?? currentGrammarList[0];
   
   const rawTest = state.jlptTests[0];
+  const localTestTemplate = localJlptTests[state.selectedTestLevel];
   const currentTest = rawTest ? { 
     ...rawTest, 
-    passScore: rawTest.passScore || rawTest.pass_score 
-  } : { title: "Loading...", passScore: 70, questions: [], description: "..." };
+    passScore: rawTest.passScore || rawTest.pass_score,
+    sections: localTestTemplate?.sections ?? rawTest.sections ?? [],
+    sectionTimings: localTestTemplate?.sections?.map((section) => ({
+      key: section.key,
+      label: section.label,
+      timeLimitMinutes: section.timeLimitMinutes
+    })) ?? rawTest.sectionTimings ?? []
+  } : { title: "Loading...", passScore: 70, questions: [], description: "...", sections: [], sectionTimings: [] };
 
   const currentResult = state.testSubmitted ? state.testResult : null;
 
@@ -269,12 +392,29 @@ export function useVocabState() {
   // --- State Updaters ---
   function setActivePage(activePage) { setState((current) => ({ ...current, activePage })); }
   function setSelectedLevel(selectedLevel) { setState((current) => ({ ...current, selectedLevel })); }
+  function setLanguage(language) { setState((current) => ({ ...current, language })); }
   function selectGrammar(selectedGrammarId) { setState((current) => ({ ...current, selectedGrammarId })); }
   function openGrammarDetail(selectedGrammarId) { setState((current) => ({ ...current, selectedGrammarId, activePage: "grammar-detail" })); }
   function setSelectedLessonId(selectedLessonId) { setState((current) => ({ ...current, selectedLessonId })); }
-  function setTestLevel(selectedTestLevel) { setState((current) => ({ ...current, selectedTestLevel, testAnswers: {}, testSubmitted: false, testResult: null })); }
+  function markLessonProgress(lessonId, status) {
+    if (!lessonId || !status) return;
+
+    setState((current) => ({
+      ...current,
+      lessonProgress: {
+        ...current.lessonProgress,
+        [lessonId]: {
+          status,
+          updatedAt: Date.now()
+        }
+      }
+    }));
+
+    void syncLessonProgress(lessonId, status);
+  }
+  function setTestLevel(selectedTestLevel) { setState((current) => ({ ...current, selectedTestLevel, testAnswers: {}, testSubmitted: false, testResult: null, testAttemptId: current.testAttemptId + 1 })); }
   function setTestAnswer(questionId, value) { setState((current) => ({ ...current, testAnswers: { ...current.testAnswers, [questionId]: value } })); }
-  function resetTest() { setState((current) => ({ ...current, testAnswers: {}, testSubmitted: false, testResult: null })); }
+  function resetTest() { setState((current) => ({ ...current, testAnswers: {}, testSubmitted: false, testResult: null, testAttemptId: current.testAttemptId + 1 })); }
 
   async function submitTest() {
     if (state.testSubmitted) return;
@@ -323,16 +463,20 @@ export function useVocabState() {
     }));
   }
   
+  const t = (key, params = {}) => translate(state.language, key, '', params);
+
   return {
     // State
     state,
     user: state.user,
+    language: state.language,
     isAuthenticated: !!state.token,
     
     // Data
     stats,
     currentTest,
     currentResult,
+    testAttemptId: state.testAttemptId,
     selectedGrammar,
     currentGrammarList,
     vocabulary: state.vocabulary,
@@ -346,9 +490,11 @@ export function useVocabState() {
     // Actions
     setActivePage,
     setSelectedLevel,
+    setLanguage,
     selectGrammar,
     openGrammarDetail,
     setSelectedLessonId,
+    markLessonProgress,
     setTestLevel,
     setTestAnswer,
     submitTest,
@@ -356,6 +502,8 @@ export function useVocabState() {
     login,
     register,
     logout,
-    refreshData: fetchAllData
+    refreshData: fetchAllData,
+    refreshLessonProgress: fetchLessonProgress,
+    t
   };
 }

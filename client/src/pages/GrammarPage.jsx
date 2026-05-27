@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { translate } from '../i18n.js';
 
 /**
  * GrammarPage component allows users to browse and search for Japanese grammar points.
@@ -6,6 +7,10 @@ import React, { useState } from 'react';
  */
 export default function GrammarPage({ grammar = [], setActivePage, setSelectedGrammar }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchPlaceholder = 'Tìm theo tiêu đề hoặc ý nghĩa... / Search by title or meaning...';
+  const noResultTitle = 'Không tìm thấy! / Nothing found!';
+  const noResultDesc = `Chúng tôi không tìm thấy mẫu ngữ pháp phù hợp với "${searchQuery}". / We couldn't find any grammar points matching "${searchQuery}".`;
+  const reviewLabel = `${translate('en', 'grammar.reviewPoint', 'Review Point')} / ${translate('vi', 'grammar.reviewPoint', 'Điểm ôn tập')}`;
 
   // Filter logic for title and explanation
   const filteredGrammar = grammar.filter((item) => {
@@ -25,7 +30,7 @@ export default function GrammarPage({ grammar = [], setActivePage, setSelectedGr
         </div>
         <input
           type="text"
-          placeholder="Search by title or meaning (e.g., '~wa', 'topic', 'request')..."
+          placeholder={searchPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-12 pr-4 py-4 bg-white border-2 border-transparent rounded-2xl shadow-sm focus:ring-4 focus:ring-pink-100 focus:border-pink-500 outline-none transition-all text-lg placeholder:text-gray-400"
@@ -57,7 +62,7 @@ export default function GrammarPage({ grammar = [], setActivePage, setSelectedGr
               </p>
               
               <div className="flex items-center text-pink-500 font-bold text-sm">
-                Review Point
+                {reviewLabel}
                 <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
               </div>
             </button>
@@ -67,13 +72,13 @@ export default function GrammarPage({ grammar = [], setActivePage, setSelectedGr
         /* Empty State */
         <div className="text-center py-24 bg-white/50 rounded-3xl border-2 border-dashed border-pink-200">
           <div className="text-6xl mb-6 opacity-60">🙈</div>
-          <h3 className="text-2xl font-bold text-gray-900">Nothing found!</h3>
-          <p className="text-gray-500 mt-2 max-w-xs mx-auto">We couldn't find any grammar points matching "{searchQuery}".</p>
+          <h3 className="text-2xl font-bold text-gray-900">{noResultTitle}</h3>
+          <p className="text-gray-500 mt-2 max-w-xs mx-auto">{noResultDesc}</p>
           <button 
             onClick={() => setSearchQuery('')}
             className="mt-8 px-8 py-3 bg-pink-500 text-white font-black rounded-2xl hover:bg-pink-600 transition-all active:scale-95 shadow-lg shadow-pink-200"
           >
-            Reset Search
+            Reset Search / Xóa tìm kiếm
           </button>
         </div>
       )}

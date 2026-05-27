@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS jlpt_questions (
     level_id INTEGER REFERENCES levels(id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
     question_type VARCHAR(50), -- 'grammar', 'vocabulary', 'reading'
+    passage TEXT,
     options JSONB,             -- Lưu mảng các lựa chọn ["A", "B", "C", "D"]
     correct_answer_index INTEGER,
     explanation TEXT,

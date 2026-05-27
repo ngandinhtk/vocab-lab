@@ -9,6 +9,7 @@
     "build": "vite build --config client/vite.config.js",
     "start": "node server/index.js",
     "db:seed:admin": "node server/seed_admin.js",
+    "db:seed:lessons": "node server/seed_lessons.js",
     "get:levels": "node server/temp_get_levels.js",
     "db:import:hanabira": "node server/import_hanabira.js",
     "db:import:kanji": "node server/import_kanji.js",

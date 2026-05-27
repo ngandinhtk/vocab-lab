@@ -1,3 +1,67 @@
+import React, { useEffect, useMemo, useState } from "react";
+
+function formatTimeLeft(totalSeconds) {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function buildSections(currentTest) {
+  const sectionMeta = Array.isArray(currentTest.sections) ? currentTest.sections : [];
+  if (sectionMeta.length) {
+    return sectionMeta.map((section) => ({
+      label: section.label,
+      timeLimitMinutes: section.timeLimitMinutes ?? 0,
+      questions: currentTest.questions.filter((question) => question.section === section.label)
+    }));
+  }
+
+  const grouped = [];
+  for (const question of currentTest.questions) {
+    const lastSection = grouped[grouped.length - 1];
+    if (!lastSection || lastSection.label !== question.section) {
+      grouped.push({ label: question.section, timeLimitMinutes: 0, questions: [question] });
+    } else {
+      lastSection.questions.push(question);
+    }
+  }
+  return grouped;
+}
+
+function getQuestionFormatLabel(question) {
+  if (question.format === "one-choice") return "One choice";
+  if (question.format === "sentence-completion") return "Sentence completion";
+  if (question.format === "reading-passage") return "Reading passage";
+  if (question.section === "Reading") return "Reading";
+  if (question.section === "Grammar/Vocab") return "Sentence completion";
+  return "Choice";
+}
+
+function groupReadingQuestions(questions) {
+  const groups = [];
+  for (const question of questions) {
+    const passageKey = question.passage || `__single_${question.id}`;
+    const lastGroup = groups[groups.length - 1];
+    if (!lastGroup || lastGroup.passageKey !== passageKey) {
+      groups.push({ passageKey, passage: question.passage || "", questions: [question] });
+    } else {
+      lastGroup.questions.push(question);
+    }
+  }
+  return groups;
+}
+
+function createTimerState(sections) {
+  return sections.reduce((acc, section) => {
+    acc[section.label] = {
+      secondsLeft: Math.max(0, (section.timeLimitMinutes || 0) * 60),
+      locked: false
+    };
+    return acc;
+  }, {});
+}
+
 export default function JlptPage({
   selectedTestLevel = "N5",
   currentTest = { title: "Loading...", passScore: 70, questions: [], description: "Loading test data..." },
@@ -6,8 +70,47 @@ export default function JlptPage({
   setTestAnswer = () => {},
   submitTest = () => {},
   resetTest = () => {},
-  setActivePage = () => {}
+  setActivePage = () => {},
+  testAttemptId = 0
 }) {
+  const sections = useMemo(() => buildSections(currentTest), [currentTest]);
+  const [sectionTimerState, setSectionTimerState] = useState(() => createTimerState(sections));
+
+  useEffect(() => {
+    setSectionTimerState(createTimerState(sections));
+  }, [selectedTestLevel, testAttemptId, sections]);
+
+  useEffect(() => {
+    if (!sections.length || currentTest.questions.length === 0) return;
+
+    const timer = window.setInterval(() => {
+      setSectionTimerState((current) => {
+        let changed = false;
+        const next = { ...current };
+
+        for (const section of sections) {
+          const currentSection = next[section.label];
+          if (!currentSection || currentSection.locked || currentSection.secondsLeft <= 0) continue;
+
+          const nextSeconds = currentSection.secondsLeft - 1;
+          next[section.label] = {
+            secondsLeft: Math.max(0, nextSeconds),
+            locked: nextSeconds <= 0
+          };
+          changed = true;
+        }
+
+        return changed ? next : current;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [sections, currentTest.questions.length]);
+
+  const isSectionLocked = (label) => Boolean(sectionTimerState[label]?.locked);
+  const questionCount = sections.reduce((total, section) => total + section.questions.length, 0);
+  const allSectionsLocked = sections.length > 0 && sections.every((section) => isSectionLocked(section.label));
+
   return (
     <div className="space-y-12 animate-fade-in">
       {/* Hero Section */}
@@ -59,39 +162,112 @@ export default function JlptPage({
                 <strong className="text-lg">{currentTest.title}</strong>
                 <div className="flex gap-4 text-sm">
                   <span className="font-semibold">Pass: {currentTest.passScore}%</span>
-                  <span className="font-semibold">{currentTest.questions.length} câu</span>
+                  <span className="font-semibold">{questionCount} câu</span>
                 </div>
               </div>
             </div>
 
             <p className="text-gray-700 mb-6">{currentTest.description}</p>
+            <div className="mb-6 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+              {allSectionsLocked
+                ? "Hết giờ cho tất cả các phần. Bài làm sẵn sàng để chấm."
+                : "Mỗi phần có bộ đếm riêng. Khi hết giờ, phần đó sẽ bị khóa."}
+            </div>
 
             {/* Quiz Questions */}
-            <div className="space-y-6 mb-8">
-              {currentTest.questions.map((question, index) => (
-                <article key={question.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition-all">
-                  <div className="flex items-baseline justify-between mb-3">
-                    <span className="text-xs font-bold bg-orange-100 text-orange-700 px-3 py-1 rounded-lg">{question.section}</span>
-                    <strong className="text-gray-900">Câu {index + 1}</strong>
+            <div className="space-y-8 mb-8">
+              {sections.map((section) => (
+                <section key={section.label} className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold bg-orange-100 text-orange-700 px-3 py-1 rounded-lg">{section.label}</span>
+                    <span className="text-xs font-semibold text-gray-500">{section.questions.length} câu</span>
+                    {section.timeLimitMinutes ? (
+                      <span className={`text-xs font-bold px-3 py-1 rounded-lg ${isSectionLocked(section.label) ? "bg-gray-200 text-gray-700" : "bg-rose-100 text-rose-700"}`}>
+                        {isSectionLocked(section.label) ? "Hết giờ" : formatTimeLeft(sectionTimerState[section.label]?.secondsLeft ?? 0)}
+                      </span>
+                    ) : null}
                   </div>
-                  <p className="text-gray-800 font-medium mb-4">{question.prompt}</p>
-                  <div className="space-y-2">
-                    {question.choices.map((choice) => (
-                      <button
-                        key={choice}
-                        type="button"
-                        className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all border-2 ${
-                          testAnswers[question.id] === choice
-                            ? 'border-orange-500 bg-orange-50 text-orange-900'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-orange-300'
-                        }`}
-                        onClick={() => setTestAnswer(question.id, choice)}
-                      >
-                        {choice}
-                      </button>
-                    ))}
-                  </div>
-                </article>
+
+                  {section.label === "Reading" ? (
+                    groupReadingQuestions(section.questions).map((group) => (
+                      <div key={group.passageKey} className="space-y-4">
+                        {group.passage ? (
+                          <div className="rounded-xl border border-sky-100 bg-sky-50/80 p-4 text-sm leading-7 text-slate-700 whitespace-pre-line">
+                            {group.passage}
+                          </div>
+                        ) : null}
+                        {group.questions.map((question) => (
+                          <article key={question.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition-all">
+                            <div className="flex items-baseline justify-between mb-3">
+                              <span className="text-xs font-bold bg-orange-100 text-orange-700 px-3 py-1 rounded-lg">{question.section}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">
+                                  {getQuestionFormatLabel(question)}
+                                </span>
+                                <strong className="text-gray-900">Câu {currentTest.questions.findIndex((item) => item.id === question.id) + 1}</strong>
+                              </div>
+                            </div>
+                            <p className="text-gray-800 font-medium mb-4">{question.prompt}</p>
+                            <div className="space-y-2">
+                              {question.choices.map((choice) => (
+                                <button
+                                  key={choice}
+                                  type="button"
+                                  disabled={isSectionLocked(question.section) || currentTest.questions.length === 0}
+                                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all border-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                    testAnswers[question.id] === choice
+                                      ? 'border-orange-500 bg-orange-50 text-orange-900'
+                                      : 'border-gray-200 bg-white text-gray-700 hover:border-orange-300'
+                                  }`}
+                                  onClick={() => setTestAnswer(question.id, choice)}
+                                >
+                                  {choice}
+                                </button>
+                              ))}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ))
+                  ) : (
+                    section.questions.map((question) => (
+                      <article key={question.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition-all">
+                        <div className="flex items-baseline justify-between mb-3">
+                          <span className="text-xs font-bold bg-orange-100 text-orange-700 px-3 py-1 rounded-lg">{question.section}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">
+                              {getQuestionFormatLabel(question)}
+                            </span>
+                            <strong className="text-gray-900">Câu {currentTest.questions.findIndex((item) => item.id === question.id) + 1}</strong>
+                          </div>
+                        </div>
+                        {question.passage ? (
+                          <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/80 p-4 text-sm leading-7 text-slate-700 whitespace-pre-line">
+                            {question.passage}
+                          </div>
+                        ) : null}
+                        <p className="text-gray-800 font-medium mb-4">{question.prompt}</p>
+                        <div className="space-y-2">
+                          {question.choices.map((choice) => (
+                            <button
+                              key={choice}
+                              type="button"
+                              disabled={isSectionLocked(question.section) || currentTest.questions.length === 0}
+                              className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all border-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                testAnswers[question.id] === choice
+                                  ? 'border-orange-500 bg-orange-50 text-orange-900'
+                                  : 'border-gray-200 bg-white text-gray-700 hover:border-orange-300'
+                              }`}
+                              onClick={() => setTestAnswer(question.id, choice)}
+                            >
+                              {choice}
+                            </button>
+                          ))}
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </section>
               ))}
             </div>
 
@@ -112,6 +288,11 @@ export default function JlptPage({
                 Làm lại
               </button>
             </div>
+            {allSectionsLocked && (
+              <p className="mt-4 text-sm text-gray-600">
+                Thời gian cho từng phần đã kết thúc. Bạn có thể chấm điểm ngay.
+              </p>
+            )}
           </div>
         </div>
 
@@ -170,4 +351,3 @@ export default function JlptPage({
     </div>
   );
 }
-

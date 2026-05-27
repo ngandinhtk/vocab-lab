@@ -3,16 +3,19 @@ export default function GrammarDetailPage({
   currentGrammarList = [],
   setSelectedLevel = () => {},
   openGrammarDetail = () => {},
-  setActivePage = () => {}
+  setActivePage = () => {},
+  t = () => ''
 }) {
+  const getText = (key, fallback) => (typeof t === 'function' ? t(key) : fallback);
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-teal-400 via-emerald-400 to-green-400 text-white p-8 sm:p-12 rounded-3xl shadow-lg">
-        <p className="text-sm font-bold uppercase tracking-widest opacity-90">Ngữ pháp / chi tiết</p>
-        <h1 className="text-3xl sm:text-4xl font-extrabold mt-3 mb-4">Trang chi tiết riêng cho từng mẫu câu.</h1>
+        <p className="text-sm font-bold uppercase tracking-widest opacity-90">{getText('grammarDetail.heroTag', 'Ngữ pháp / chi tiết')}</p>
+        <h1 className="text-3xl sm:text-4xl font-extrabold mt-3 mb-4">{getText('grammarDetail.heroTitle', 'Trang chi tiết riêng cho từng mẫu câu.')}</h1>
         <p className="text-lg opacity-95">
-          Đây là tầng sâu hơn của ngữ pháp. Người học đọc xong một thẻ sẽ thấy toàn bộ ý nghĩa, ví dụ, và ghi chú trong một màn hình riêng.
+          {getText('grammarDetail.heroSubtitle', 'Đây là tầng sâu hơn của ngữ pháp. Người học đọc xong một thẻ sẽ thấy toàn bộ ý nghĩa, ví dụ, và ghi chú trong một màn hình riêng.')}
         </p>
       </div>
 
@@ -21,9 +24,9 @@ export default function GrammarDetailPage({
         {/* Sidebar with Grammar List */}
         <aside className="bg-white p-8 rounded-2xl shadow-sm border border-teal-100 h-fit">
           <div className="mb-6">
-            <p className="text-sm font-bold uppercase tracking-widest text-teal-500">Context</p>
-            <h2 className="text-2xl font-bold text-gray-900 mt-2">Các mẫu cùng level</h2>
-            <span className="text-gray-500 text-sm mt-1 block">Điều hướng nhanh giữa các mẫu liên quan.</span>
+            <p className="text-sm font-bold uppercase tracking-widest text-teal-500">{getText('grammarDetail.context', 'Context')}</p>
+            <h2 className="text-2xl font-bold text-gray-900 mt-2">{getText('grammarDetail.sameLevel', 'Các mẫu cùng level')}</h2>
+            <span className="text-gray-500 text-sm mt-1 block">{getText('grammarDetail.sameLevelNote', 'Điều hướng nhanh giữa các mẫu liên quan.')}</span>
           </div>
 
           <div className="space-y-2 mb-8 max-h-96 overflow-y-auto">
@@ -46,7 +49,7 @@ export default function GrammarDetailPage({
                   {item.explanation}
                 </p>
                 <div className={`flex gap-2 mt-2 text-xs ${selectedGrammar?.id === item.id ? 'opacity-80' : 'opacity-60'}`}>
-                  <span>{item.examples?.length || 0} ví dụ</span>
+                  <span>{item.examples?.length || 0} {getText('grammarDetail.examples', 'ví dụ')}</span>
                 </div>
               </button>
             ))}
@@ -58,14 +61,14 @@ export default function GrammarDetailPage({
               type="button" 
               onClick={() => setSelectedLevel("N5")}
             >
-              Về N5
+              {getText('grammarDetail.backToN5', 'Về N5')}
             </button>
             <button 
               className="w-full px-4 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
               type="button" 
               onClick={() => setActivePage("grammar")}
             >
-              Quay lại danh sách
+              {getText('grammarDetail.backToList', 'Quay lại danh sách')}
             </button>
           </div>
         </aside>
@@ -73,8 +76,8 @@ export default function GrammarDetailPage({
         {/* Main Detail Panel */}
         <article className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-teal-100">
           <div className="mb-8">
-            <p className="text-sm font-bold uppercase tracking-widest text-teal-500">Detail view</p>
-            <h2 className="text-2xl font-bold text-gray-900 mt-2">{selectedGrammar?.title ?? "Chưa chọn mẫu"}</h2>
+            <p className="text-sm font-bold uppercase tracking-widest text-teal-500">{getText('grammarDetail.detailView', 'Detail view')}</p>
+            <h2 className="text-2xl font-bold text-gray-900 mt-2">{selectedGrammar?.title ?? getText('grammarDetail.noSelection', 'Chưa chọn mẫu')}</h2>
             {/* <span className="text-gray-500 text-sm mt-1 block">Trang này tách riêng để tạo cảm giác nhiều tầng nội dung.</span> */}
           </div>
 
@@ -92,7 +95,7 @@ export default function GrammarDetailPage({
 
               {/* Detail Grid */}
               <div className="mb-8">
-                <dt className="text-sm font-bold uppercase text-gray-500 mb-4">Giải thích & Cấu trúc</dt>
+                <dt className="text-sm font-bold uppercase text-gray-500 mb-4">{getText('grammarDetail.explanation', 'Giải thích & Cấu trúc')}</dt>
                 <dd className="text-gray-800 font-medium whitespace-pre-wrap leading-relaxed bg-gray-50 p-6 rounded-xl border border-gray-100">
                   {selectedGrammar.explanation}
                 </dd>
@@ -100,7 +103,7 @@ export default function GrammarDetailPage({
 
               {/* Examples Section */}
               <div className="mb-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Ví dụ</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">{getText('grammarDetail.examples', 'Ví dụ')}</h3>
                 <div className="space-y-3">
                   {selectedGrammar.examples?.map((example, idx) => (
                     <div key={idx} className="bg-emerald-50 border border-emerald-100 p-5 rounded-xl">
@@ -114,7 +117,7 @@ export default function GrammarDetailPage({
             </>
           ) : (
             <div className="text-center py-16 text-gray-500">
-              <p className="text-lg font-medium">Chưa chọn mẫu</p>
+              <p className="text-lg font-medium">{getText('grammarDetail.noSelection', 'Chưa chọn mẫu')}</p>
             </div>
           )}
 
@@ -125,14 +128,14 @@ export default function GrammarDetailPage({
               type="button" 
               onClick={() => setActivePage("jlpt")}
             >
-              Sang JLPT
+              {getText('grammarDetail.toJlpt', 'Sang JLPT')}
             </button>
             <button 
               className="flex-1 px-4 py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
               type="button" 
               onClick={() => setActivePage("progress")}
             >
-              Xem tiến độ
+              {getText('grammarDetail.viewProgress', 'Xem tiến độ')}
             </button>
           </div>
         </article>

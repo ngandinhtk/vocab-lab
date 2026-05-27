@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import LevelTabs from '../components/LevelTabs.jsx';
+import { translate } from '../i18n.js';
 
 export default function VocabularyPage({ vocabulary = [], selectedLevel, setSelectedLevel }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchPlaceholder = `${translate('vi', 'vocabulary.searchPlaceholder')} / ${translate('en', 'vocabulary.searchPlaceholder')}`;
+  const noMatchText = `${translate('vi', 'vocabulary.noMatch')} / ${translate('en', 'vocabulary.noMatch')}`;
 
   const filteredVocab = vocabulary.filter((item) => {
     // JLPT level in database is an integer (5, 4, 3, 2, 1)
@@ -27,7 +30,7 @@ export default function VocabularyPage({ vocabulary = [], selectedLevel, setSele
         </div>
         <input
           type="text"
-          placeholder="Tìm từ vựng, cách đọc hoặc ý nghĩa..."
+          placeholder={searchPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-12 pr-4 py-4 bg-white border-2 border-transparent rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-lg"
@@ -46,20 +49,25 @@ export default function VocabularyPage({ vocabulary = [], selectedLevel, setSele
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-1">{item.word}</h3>
               <p className="text-sm text-gray-500 mb-4 font-medium">【{item.reading}】</p>
-              <p className="text-gray-700 mb-4">{item.meaning}</p>
+              <p className="text-gray-700 mb-4"><span className="font-bold">Meaning / Ý nghĩa:</span> {item.meaning}</p>
               
-              {item.example_sentences && item.example_sentences.length > 0 && (
-                <div className="pt-4 border-t border-blue-50">
-                  <p className="text-xs font-bold text-gray-400 uppercase mb-2">Ví dụ</p>
-                  <p className="text-sm text-gray-600 italic">"{item.example_sentences[0].ja}"</p>
-                </div>
-              )}
+              {item.example_sentences && item.example_sentences.length > 0 && (() => {
+                const example = item.example_sentences[0];
+                return (
+                  <div className="pt-4 border-t border-blue-50">
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">Example / Ví dụ</p>
+                    <p className="text-sm text-gray-600 italic">"{example.ja}"</p>
+                    {example.vi && <p className="text-sm text-gray-700 mt-2">{example.vi}</p>}
+                    {example.en && <p className="text-sm text-gray-500 mt-1 italic">{example.en}</p>}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>
       ) : (
         <div className="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-blue-200">
-          <p className="text-gray-500">Không tìm thấy từ vựng nào phù hợp.</p>
+          <p className="text-gray-500">{noMatchText}</p>
         </div>
       )}
     </div>

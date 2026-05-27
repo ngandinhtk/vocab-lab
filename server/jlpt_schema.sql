@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.jlpt_questions (
     id SERIAL PRIMARY KEY,
     test_id INTEGER REFERENCES public.jlpt_tests(id) ON DELETE CASCADE,
     section TEXT NOT NULL, -- 'Ngữ pháp', 'Từ vựng', 'Đọc hiểu', 'Nghe hiểu'
+    format TEXT, -- 'one-choice', 'sentence-completion', 'reading-passage'
+    passage TEXT,
     prompt TEXT NOT NULL,
     choices JSONB NOT NULL, -- Array of strings
     answer TEXT NOT NULL,

@@ -1,14 +1,14 @@
 import React from 'react';
 
-export default function Navigation({ activePage, setActivePage, onNavigate }) {
+export default function Navigation({ activePage, setActivePage, onNavigate, t }) {
   const navItems = [
-    { id: 'home', label: 'Dashboard', icon: '🏠' },
-    { id: 'roadmap', label: 'Roadmap', icon: '🗺️' },
-    { id: 'vocabulary', label: 'Từ vựng', icon: '📚' },
-    { id: 'kanji', label: 'Kanji', icon: '✍️' },
-    { id: 'grammar', label: 'Ngữ pháp', icon: '⛩️' },
-    { id: 'jlpt', label: 'Luyện đề', icon: '📝' },
-    { id: 'progress', label: 'Tiến độ', icon: '📊' },
+    { id: 'home', label: t?.('nav.home') ?? 'Dashboard', icon: '🏠' },
+    { id: 'roadmap', label: t?.('nav.roadmap') ?? 'Roadmap', icon: '🗺️' },
+    { id: 'vocabulary', label: t?.('nav.vocabulary') ?? 'Vocabulary', icon: '📚' },
+    { id: 'kanji', label: t?.('nav.kanji') ?? 'Kanji', icon: '✍️' },
+    { id: 'grammar', label: t?.('nav.grammar') ?? 'Grammar', icon: '⛩️' },
+    { id: 'jlpt', label: t?.('nav.jlpt') ?? 'JLPT', icon: '📝' },
+    { id: 'progress', label: t?.('nav.progress') ?? 'Progress', icon: '📊' },
   ];
 
   return (
